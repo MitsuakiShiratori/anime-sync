@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnimeSync — サイト構造図</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07090f;
+  --bg2: #0c1018;
+  --bg3: #111720;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --accent: #58c4e0;
+  --accent2: #e87098;
+  --accent3: #74c48a;
+  --gold: #f5c842;
+  --purple: #a78bfa;
+  --orange: #fb923c;
+  --text: #dde3ee;
+  --muted: #4e5f74;
+  --muted2: #8a9bb0;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  min-height: 100vh;
+  padding: 40px 32px 80px;
+  font-size: 13px;
+}
+
+/* ヘッダー */
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.header-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  letter-spacing: 6px;
+  color: var(--accent);
+  text-shadow: 0 0 30px rgba(88,196,224,0.4);
+}
+.header-sub {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.header-desc {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--muted2);
+  line-height: 1.8;
+}
+
+/* フェーズ凡例 */
+.legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted2);
+}
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 3px;
+}
+
+/* ルートノード */
+.root {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0;
+}
+.root-node {
+  background: linear-gradient(135deg, rgba(88,196,224,0.15), rgba(88,196,224,0.05));
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: 16px 40px;
+  text-align: center;
+  box-shadow: 0 0 32px rgba(88,196,224,0.15);
+  position: relative;
+}
+.root-node::after {
+  content:'';
+  position: absolute;
+  bottom: -32px; left: 50%;
+  transform: translateX(-50%);
+  width: 2px; height: 32px;
+  background: var(--border2);
+}
+.root-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+.root-sub {
+  font-size: 10px;
+  color: var(--muted2);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+/* メインメニュー行 */
+.main-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+/* カラム */
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 160px;
+  max-width: 200px;
+  flex: 1;
+}
+
+/* メインメニューノード */
+.menu-node {
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  width: 100%;
+  position: relative;
+  border: 1px solid;
+}
+.menu-node::after {
+  content:'';
+  position: absolute;
+  bottom: -20px; left: 50%;
+  transform: translateX(-50%);
+  width: 2px; height: 20px;
+}
+
+.mn-schedule { background: rgba(88,196,224,0.1); border-color: rgba(88,196,224,0.4); color: var(--accent); }
+.mn-schedule::after { background: rgba(88,196,224,0.3); }
+.mn-log      { background: rgba(232,112,152,0.1); border-color: rgba(232,112,152,0.4); color: var(--accent2); }
+.mn-log::after { background: rgba(232,112,152,0.3); }
+.mn-ranking  { background: rgba(245,200,66,0.1);  border-color: rgba(245,200,66,0.4);  color: var(--gold); }
+.mn-ranking::after { background: rgba(245,200,66,0.3); }
+.mn-work     { background: rgba(116,196,138,0.1); border-color: rgba(116,196,138,0.4); color: var(--accent3); }
+.mn-work::after { background: rgba(116,196,138,0.3); }
+.mn-community{ background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.4); color: var(--purple); }
+.mn-community::after { background: rgba(167,139,250,0.3); }
+.mn-mypage   { background: rgba(251,146,60,0.1);  border-color: rgba(251,146,60,0.4);  color: var(--orange); }
+.mn-mypage::after { background: rgba(251,146,60,0.3); }
+
+.menu-icon { font-size: 18px; margin-bottom: 4px; }
+.menu-label { font-size: 12px; font-weight: 700; }
+.menu-en { font-size: 9px; letter-spacing: 2px; opacity: 0.6; margin-top: 2px; }
+
+/* サブノードコンテナ */
+.sub-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 20px;
+  position: relative;
+}
+.sub-container::before {
+  content:'';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 2px; height: 100%;
+  background: var(--border);
+  z-index: 0;
+}
+
+.sub-node {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--muted2);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  line-height: 1.4;
+}
+.sub-node:hover {
+  border-color: var(--border2);
+  color: var(--text);
+}
+.sub-title { font-weight: 700; font-size: 12px; color: var(--text); margin-bottom: 2px; }
+.sub-desc { font-size: 10px; color: var(--muted); line-height: 1.5; }
+
+/* フェーズバッジ */
+.phase {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-top: 3px;
+  letter-spacing: 1px;
+}
+.ph1 { background: rgba(88,196,224,0.2); color: var(--accent); }
+.ph2 { background: rgba(245,200,66,0.2); color: var(--gold); }
+.ph3 { background: rgba(167,139,250,0.2); color: var(--purple); }
+
+/* 非ログイン／ログイン分岐 */
+.auth-section {
+  margin-top: 48px;
+  border-top: 1px solid var(--border);
+  padding-top: 32px;
+}
+.auth-title {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.auth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.auth-col {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.auth-col-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted2);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.auth-item {
+  font-size: 11px;
+  color: var(--muted2);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.auth-item:last-child { border-bottom: none; }
+.auth-item .dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.dot-free { background: var(--accent3); }
+.dot-login { background: var(--gold); }
+
+/* 収益モデル */
+.revenue-section {
+  margin-top: 48px;
+  border-top: 1px solid var(--border);
+  padding-top: 32px;
+}
+.revenue-title {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.revenue-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.revenue-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  min-width: 180px;
+  flex: 1;
+  max-width: 220px;
+}
+.rev-phase { font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-bottom: 6px; }
+.rev-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.rev-desc { font-size: 11px; color: var(--muted2); line-height: 1.6; }
+
+/* フッター注釈 */
+.footnote {
+  margin-top: 48px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.8;
+}
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header">
+  <div class="header-logo">AnimeSync</div>
+  <div class="header-sub">SITE STRUCTURE MAP — Ver 1.0</div>
+  <div class="header-desc">
+    「リアタイ体験の整理」×「感情の記録」×「ネタバレ制御コミュニティ」<br>
+    広場に行く前のコクピット。
+  </div>
+</div>
+
+<!-- 凡例 -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> Phase 1 — MVP（今すぐ作る）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div> Phase 2 — 感情・ランキング拡張</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Phase 3 — コミュニティ・データ化</div>
+</div>
+
+<!-- ルート -->
+<div class="root">
+  <div class="root-node">
+    <div class="root-label">animesync.com</div>
+    <div class="root-sub">TOP / ランディングページ</div>
+  </div>
+</div>
+
+<!-- メインメニュー + サブページ -->
+<div class="main-row">
+
+  <!-- 1. スケジュール -->
+  <div class="col">
+    <div class="menu-node mn-schedule">
+      <div class="menu-icon">📅</div>
+      <div class="menu-label">スケジュール</div>
+      <div class="menu-en">SCHEDULE</div>
+    </div>
+    <div class="sub-container">
+      <div class="sub-node">
+        <div class="sub-title">今期一覧</div>
+        <div class="sub-desc">放映中の全作品をカード表示</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">曜日別カレンダー</div>
+        <div class="sub-desc">月〜日の運行表ビュー</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">マイ最速表示</div>
+        <div class="sub-desc">加入サブスクに合わせた最速配信のみ表示</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">LINE通知設定</div>
+        <div class="sub-desc">週次ダイジェスト／直前通知の管理</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">来期プレビュー</div>
+        <div class="sub-desc">次クールの先行情報まとめ</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 感情ログ -->
+  <div class="col">
+    <div class="menu-node mn-log">
+      <div class="menu-icon">🎭</div>
+      <div class="menu-label">感情ログ</div>
+      <div class="menu-en">EMOTION LOG</div>
+    </div>
+    <div class="sub-container">
+      <div class="sub-node">
+        <div class="sub-title">視聴ログ記録</div>
+        <div class="sub-desc">神 / 余韻 / 不憫 の3択＋メモ</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">話数別タイムライン</div>
+        <div class="sub-desc">1話〜最終話の感情変化を時系列表示</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">感情ヒートマップ</div>
+        <div class="sub-desc">1クールを通じた熱量の可視化</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">余韻レポート</div>
+        <div class="sub-desc">クール終了後の自動振り返りレポート</div>
+        <span class="phase ph3">Phase 3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ランキング -->
+  <div class="col">
+    <div class="menu-node mn-ranking">
+      <div class="menu-icon">🏆</div>
+      <div class="menu-label">ランキング</div>
+      <div class="menu-en">RANKING</div>
+    </div>
+    <div class="sub-container">
+      <div class="sub-node">
+        <div class="sub-title">個人ランキング</div>
+        <div class="sub-desc">主人公 / ヒロイン / 負けヒロイン / 作品</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">全体ランキング</div>
+        <div class="sub-desc">ユーザー集計によるリアルタイム順位</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">スタジオ別ランキング</div>
+        <div class="sub-desc">制作会社 / 監督 / 脚本家の評価軸</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">歴代ランキング</div>
+        <div class="sub-desc">クール横断の殿堂入りリスト</div>
+        <span class="phase ph3">Phase 3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 作品データベース -->
+  <div class="col">
+    <div class="menu-node mn-work">
+      <div class="menu-icon">📖</div>
+      <div class="menu-label">作品DB</div>
+      <div class="menu-en">WORKS</div>
+    </div>
+    <div class="sub-container">
+      <div class="sub-node">
+        <div class="sub-title">作品詳細ページ</div>
+        <div class="sub-desc">あらすじ / キャスト / スタジオ / 配信先</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">キャラクター一覧</div>
+        <div class="sub-desc">主人公・ヒロイン・脇役の属性分類</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">スタジオページ</div>
+        <div class="sub-desc">制作会社の過去作・傾向まとめ</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">原作情報リンク</div>
+        <div class="sub-desc">漫画 / 小説 / ゲームへのリンク集</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. コミュニティ -->
+  <div class="col">
+    <div class="menu-node mn-community">
+      <div class="menu-icon">💬</div>
+      <div class="menu-label">コミュニティ</div>
+      <div class="menu-en">COMMUNITY</div>
+    </div>
+    <div class="sub-container">
+      <div class="sub-node">
+        <div class="sub-title">作品スレッド</div>
+        <div class="sub-desc">話数ごとに独立した議論スペース</div>
+        <span class="phase ph3">Phase 3</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">ネタバレ制御</div>
+        <div class="sub-desc">視聴進捗バッジで未視聴ネタバレを自動遮断</div>
+        <span class="phase ph3">Phase 3</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">感情部屋</div>
+        <div class="sub-desc">叫び部屋 / 考察部屋 / 作画部屋で分類</div>
+        <span class="phase ph3">Phase 3</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">リアタイ実況</div>
+        <div class="sub-desc">放映時間限定のリアルタイムチャット</div>
+        <span class="phase ph3">Phase 3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. マイページ -->
+  <div class="col">
+    <div class="menu-node mn-mypage">
+      <div class="menu-icon">👤</div>
+      <div class="menu-label">マイページ</div>
+      <div class="menu-en">MY PAGE</div>
+    </div>
+    <div class="sub-container">
+      <div class="sub-node">
+        <div class="sub-title">視聴手帳</div>
+        <div class="sub-desc">全ログの一覧・検索・絞り込み</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">サブスク設定</div>
+        <div class="sub-desc">加入プラットフォームを登録して最速表示をカスタマイズ</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">通知設定</div>
+        <div class="sub-desc">LINE連携 / 通知タイミング / 作品別ON-OFF</div>
+        <span class="phase ph1">Phase 1</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">感情グラフ</div>
+        <div class="sub-desc">自分の視聴傾向を可視化したダッシュボード</div>
+        <span class="phase ph2">Phase 2</span>
+      </div>
+      <div class="sub-node">
+        <div class="sub-title">公開プロフィール</div>
+        <div class="sub-desc">ランキングや感情ログを他ユーザーと共有</div>
+        <span class="phase ph3">Phase 3</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ログイン分岐 -->
+<div class="auth-section">
+  <div class="auth-title">ACCESS CONTROL — ログイン前後の機能分岐</div>
+  <div class="auth-row">
+    <div class="auth-col">
+      <div class="auth-col-title">🔓 ゲスト（ログイン不要）</div>
+      <div class="auth-item"><span class="dot dot-free"></span>今期スケジュール閲覧</div>
+      <div class="auth-item"><span class="dot dot-free"></span>作品詳細ページ閲覧</div>
+      <div class="auth-item"><span class="dot dot-free"></span>全体ランキング閲覧</div>
+      <div class="auth-item"><span class="dot dot-free"></span>コミュニティ読み取り（Phase3）</div>
+    </div>
+    <div class="auth-col">
+      <div class="auth-col-title">🔐 ログイン済みユーザー</div>
+      <div class="auth-item"><span class="dot dot-login"></span>感情ログの記録・保存</div>
+      <div class="auth-item"><span class="dot dot-login"></span>個人ランキング作成</div>
+      <div class="auth-item"><span class="dot dot-login"></span>LINE通知設定</div>
+      <div class="auth-item"><span class="dot dot-login"></span>サブスク設定・最速カスタマイズ</div>
+      <div class="auth-item"><span class="dot dot-login"></span>コミュニティ投稿・実況（Phase3）</div>
+      <div class="auth-item"><span class="dot dot-login"></span>感情グラフ・ヒートマップ（Phase2）</div>
+    </div>
+  </div>
+</div>
+
+<!-- 収益モデル -->
+<div class="revenue-section">
+  <div class="revenue-title">REVENUE MODEL — 収益設計</div>
+  <div class="revenue-row">
+    <div class="revenue-card">
+      <div class="rev-phase">PHASE 1</div>
+      <div class="rev-title">VODアフィリエイト</div>
+      <div class="rev-desc">U-NEXT / Prime / ABEMA への送客リンク。配信プラットフォームバッジからの自然な導線。</div>
+    </div>
+    <div class="revenue-card">
+      <div class="rev-phase">PHASE 2</div>
+      <div class="rev-title">軽量広告</div>
+      <div class="rev-desc">トラフィック増加後に導入。コンテンツ体験を壊さない最小限の広告設計。</div>
+    </div>
+    <div class="revenue-card">
+      <div class="rev-phase">PHASE 2-3</div>
+      <div class="rev-title">プレミアムプラン</div>
+      <div class="rev-desc">月額200円程度。感情グラフの詳細分析・広告非表示・通知カスタマイズ上限解放。</div>
+    </div>
+    <div class="revenue-card">
+      <div class="rev-phase">PHASE 3</div>
+      <div class="rev-title">感情データ事業（BtoB）</div>
+      <div class="rev-desc">「どの話でどの感情が動いたか」の集計データを制作会社・配信会社に提供。最大収益源。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 注釈 -->
+<div class="footnote">
+  Phase 1 = MVP（個人開発・現在進行中）　／　Phase 2 = ユーザー拡大後　／　Phase 3 = コミュニティ・事業化<br>
+  「整理の先に、感情資産を育てるアニメ手帳。」— AnimeSync Ver 1.2
+</div>
+
+</body>
+</html>

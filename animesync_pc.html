@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnimeSync</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;700;900&family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #07090f;
+  --bg2:     #0c1018;
+  --bg3:     #111720;
+  --bg4:     #161e2a;
+  --border:  rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.11);
+  --accent:  #58c4e0;
+  --accent2: #e87098;
+  --accent3: #74c48a;
+  --gold:    #f5c842;
+  --text:    #dde3ee;
+  --muted:   #4e5f74;
+  --muted2:  #8a9bb0;
+  --card:    rgba(255,255,255,0.035);
+  --sidebar-w: 220px;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body { height:100%; overflow:hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  display: flex;
+  font-size: 14px;
+}
+
+/* ノイズテクスチャ */
+body::after {
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar-glow {
+  position:absolute; top:0; left:0; right:0; height:200px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(88,196,224,0.08) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+.sidebar-logo {
+  padding: 28px 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-main {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-shadow: 0 0 24px rgba(88,196,224,0.4);
+  line-height:1;
+}
+.logo-sub {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-top: 5px;
+  font-weight: 300;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--muted2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.18s;
+  border: 1px solid transparent;
+  user-select: none;
+}
+.nav-item:hover {
+  background: var(--card);
+  color: var(--text);
+}
+.nav-item.active {
+  background: rgba(88,196,224,0.1);
+  border-color: rgba(88,196,224,0.2);
+  color: var(--accent);
+}
+.nav-icon { font-size: 16px; width: 20px; text-align:center; }
+.nav-badge {
+  margin-left: auto;
+  background: rgba(88,196,224,0.15);
+  color: var(--accent);
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+
+.nav-section-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  padding: 12px 12px 6px;
+  text-transform: uppercase;
+}
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.season-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--muted2);
+  width: 100%;
+}
+.season-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent3);
+  box-shadow: 0 0 6px var(--accent3);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ===== MAIN ===== */
+.main {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-track { background: transparent; }
+.main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* トップバー */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(7,9,15,0.88);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 3px;
+  color: var(--text);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.stats-pill {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 12px;
+  color: var(--muted2);
+}
+.stats-pill strong { color: var(--accent); font-family: 'Bebas Neue',sans-serif; font-size:15px; letter-spacing:1px; }
+
+/* コンテンツ */
+.content {
+  padding: 28px 32px 48px;
+  flex: 1;
+}
+
+/* セクション */
+.section { display:none; animation: fadeUp 0.25s ease; }
+.section.active { display:block; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ===== SCHEDULE ===== */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 32px;
+}
+.week-col { }
+.week-day-header {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  padding: 8px 4px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.week-day-header.today { color: var(--accent); }
+
+.schedule-chip {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.schedule-chip::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background: var(--accent); opacity:0; transition: opacity 0.15s;
+}
+.schedule-chip:hover { background: rgba(255,255,255,0.06); border-color: var(--border2); }
+.schedule-chip:hover::before { opacity:1; }
+.chip-emoji { font-size:16px; margin-bottom:4px; }
+.chip-title { font-size:11px; font-weight:700; line-height:1.3; margin-bottom:4px; color:var(--text); }
+.chip-time { font-size:10px; color:var(--muted); }
+.chip-badge {
+  display:inline-block; font-size:9px; padding:1px 5px; border-radius:4px;
+  font-weight:700; margin-top:4px; letter-spacing:0.5px;
+}
+.chip-badge.abema { background:rgba(232,112,152,0.2); color:var(--accent2); }
+.chip-badge.prime { background:rgba(116,196,138,0.2); color:var(--accent3); }
+.chip-badge.unext { background:rgba(245,200,66,0.2); color:var(--gold); }
+.chip-badge.tv    { background:rgba(255,255,255,0.08); color:var(--muted2); }
+
+/* クイック感情ボタン */
+.quick-emotions {
+  display: flex; gap:4px; margin-top:6px; flex-wrap:wrap;
+}
+.qe-btn {
+  font-size:9px; padding:2px 7px; border-radius:4px; cursor:pointer;
+  border:1px solid var(--border); background:none; color:var(--muted);
+  transition:all 0.12s; font-family:'Noto Sans JP',sans-serif;
+}
+.qe-btn:hover.kami { background:rgba(245,200,66,0.15); border-color:rgba(245,200,66,0.4); color:var(--gold); }
+.qe-btn:hover.yoin { background:rgba(88,196,224,0.15); border-color:rgba(88,196,224,0.4); color:var(--accent); }
+.qe-btn:hover.fubin { background:rgba(232,112,152,0.15); border-color:rgba(232,112,152,0.4); color:var(--accent2); }
+.qe-btn.logged.kami { background:rgba(245,200,66,0.2); border-color:rgba(245,200,66,0.5); color:var(--gold); }
+.qe-btn.logged.yoin { background:rgba(88,196,224,0.2); border-color:rgba(88,196,224,0.5); color:var(--accent); }
+.qe-btn.logged.fubin { background:rgba(232,112,152,0.2); border-color:rgba(232,112,152,0.5); color:var(--accent2); }
+
+/* リストビュー */
+.list-view { display:flex; flex-direction:column; gap:8px; }
+.list-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 16px;
+  transition: all 0.15s;
+  cursor: pointer;
+  position: relative; overflow: hidden;
+}
+.list-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background: var(--accent); opacity:0; transition:opacity 0.15s;
+  border-radius:3px 0 0 3px;
+}
+.list-card:hover { background: rgba(255,255,255,0.055); border-color:var(--border2); }
+.list-card:hover::before { opacity:1; }
+.lc-emoji { font-size:22px; width:32px; text-align:center; flex-shrink:0; }
+.lc-info { flex:1; }
+.lc-title { font-weight:700; font-size:15px; margin-bottom:3px; }
+.lc-meta { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted2); flex-wrap:wrap; }
+.lc-emotions { display:flex; gap:6px; flex-shrink:0; }
+.lc-ebtn {
+  border:1px solid var(--border); background:none; border-radius:8px;
+  padding:5px 12px; cursor:pointer; font-size:12px; color:var(--muted);
+  transition:all 0.12s; font-family:'Noto Sans JP',sans-serif; white-space:nowrap;
+}
+.lc-ebtn:hover { border-color:var(--border2); color:var(--text); }
+.lc-ebtn.active.kami { background:rgba(245,200,66,0.15); border-color:rgba(245,200,66,0.4); color:var(--gold); }
+.lc-ebtn.active.yoin { background:rgba(88,196,224,0.15); border-color:rgba(88,196,224,0.4); color:var(--accent); }
+.lc-ebtn.active.fubin { background:rgba(232,112,152,0.15); border-color:rgba(232,112,152,0.4); color:var(--accent2); }
+
+/* view toggle */
+.view-toggle { display:flex; gap:6px; }
+.vt-btn {
+  padding:5px 12px; border-radius:6px; border:1px solid var(--border);
+  background:none; color:var(--muted); cursor:pointer; font-size:12px;
+  transition:all 0.15s;
+}
+.vt-btn.active { background:var(--card); color:var(--text); border-color:var(--border2); }
+
+/* ===== LOG ===== */
+.log-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.log-form-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  position: sticky; top: 72px;
+}
+.form-label {
+  font-size: 11px; letter-spacing: 2px; color: var(--muted);
+  margin-bottom: 6px; display:block; text-transform:uppercase;
+}
+.form-select, .form-input, .form-textarea {
+  width:100%; background:var(--bg3); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); padding:9px 12px;
+  font-family:'Noto Sans JP',sans-serif; font-size:13px;
+  margin-bottom:14px; transition:border-color 0.15s;
+}
+.form-select:focus, .form-input:focus, .form-textarea:focus {
+  outline:none; border-color:rgba(88,196,224,0.4);
+}
+.form-textarea { resize:vertical; min-height:90px; line-height:1.6; }
+.form-emotions { display:flex; gap:8px; margin-bottom:14px; }
+.fe-btn {
+  flex:1; padding:9px; border-radius:8px; cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:700;
+  border:1px solid var(--border); background:none; color:var(--muted);
+  transition:all 0.15s; text-align:center;
+}
+.fe-btn.sel.kami { background:rgba(245,200,66,0.18); border-color:rgba(245,200,66,0.5); color:var(--gold); }
+.fe-btn.sel.yoin { background:rgba(88,196,224,0.18); border-color:rgba(88,196,224,0.5); color:var(--accent); }
+.fe-btn.sel.fubin { background:rgba(232,112,152,0.18); border-color:rgba(232,112,152,0.5); color:var(--accent2); }
+.save-btn {
+  width:100%; padding:10px; background:var(--accent); color:#07090f;
+  border:none; border-radius:8px; font-family:'Zen Kaku Gothic New',sans-serif;
+  font-size:13px; font-weight:700; cursor:pointer; letter-spacing:2px;
+  transition:opacity 0.15s;
+}
+.save-btn:hover { opacity:0.85; }
+
+.log-entries { display:flex; flex-direction:column; gap:10px; }
+.log-entry {
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:16px 18px;
+}
+.le-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.le-emoji { font-size:20px; }
+.le-title { font-weight:700; flex:1; }
+.le-ep { font-size:11px; color:var(--muted); background:var(--bg3); padding:2px 8px; border-radius:4px; }
+.le-tags { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+.le-tag { font-size:11px; padding:2px 10px; border-radius:20px; font-weight:700; }
+.le-tag.kami { background:rgba(245,200,66,0.18); color:var(--gold); }
+.le-tag.yoin { background:rgba(88,196,224,0.18); color:var(--accent); }
+.le-tag.fubin { background:rgba(232,112,152,0.18); color:var(--accent2); }
+.le-memo {
+  font-size:13px; line-height:1.7; color:rgba(221,227,238,0.75);
+  background:rgba(0,0,0,0.15); border-radius:8px; padding:10px 12px;
+  border-left:2px solid var(--border2); margin-bottom:8px;
+}
+.le-date { font-size:11px; color:var(--muted); text-align:right; }
+
+/* ===== RANKING ===== */
+.rank-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.rank-form-panel {
+  background: var(--bg2); border:1px solid var(--border); border-radius:14px;
+  padding:20px; position:sticky; top:72px;
+}
+.rank-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+.rank-tab {
+  padding:6px 14px; border-radius:7px; cursor:pointer;
+  border:1px solid var(--border); background:none;
+  font-family:'Noto Sans JP',sans-serif; font-size:12px; color:var(--muted);
+  transition:all 0.15s;
+}
+.rank-tab.active { background:var(--card); color:var(--text); border-color:var(--border2); }
+
+.rank-items { display:flex; flex-direction:column; gap:8px; }
+.rank-item {
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:14px 18px; display:flex; align-items:center; gap:14px;
+  transition:all 0.15s;
+}
+.rank-item:hover { border-color:var(--border2); }
+.rk-num {
+  font-family:'Bebas Neue',sans-serif; font-size:32px; width:40px;
+  text-align:center; flex-shrink:0; color:var(--muted); line-height:1;
+}
+.rk-num.r1 { color:var(--gold); text-shadow:0 0 16px rgba(245,200,66,0.4); }
+.rk-num.r2 { color:#90a4ae; }
+.rk-num.r3 { color:#a1887f; }
+.rk-info { flex:1; }
+.rk-name { font-weight:700; font-size:15px; margin-bottom:3px; }
+.rk-work { font-size:12px; color:var(--muted2); }
+.rk-score {
+  font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--accent);
+}
+.rk-score span { font-size:12px; color:var(--muted); }
+.slider-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.slider-row label { font-size:12px; color:var(--muted); width:50px; flex-shrink:0; }
+.slider-row input[type=range] { flex:1; accent-color:var(--accent); }
+.slider-row .val { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--accent); width:24px; text-align:right; }
+
+/* 共通 */
+.empty-state {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:60px 20px; color:var(--muted); text-align:center; gap:12px;
+}
+.empty-state .icon { font-size:36px; }
+.empty-state p { font-size:13px; line-height:1.8; }
+
+.section-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px;
+}
+.section-heading {
+  font-family:'Bebas Neue',sans-serif; font-size:22px;
+  letter-spacing:3px; color:var(--text);
+}
+
+/* トースト */
+.toast {
+  position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(60px);
+  background:var(--bg3); border:1px solid var(--border2); border-radius:10px;
+  padding:11px 20px; font-size:13px; z-index:1000;
+  transition:transform 0.28s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar">
+  <div class="sidebar-glow"></div>
+  <div class="sidebar-logo">
+    <div class="logo-main">AnimeSync</div>
+    <div class="logo-sub">YOUR ANIME COCKPIT</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">メニュー</div>
+    <div class="nav-item active" onclick="showSection('schedule',this)" data-title="週次運行表">
+      <span class="nav-icon">📅</span> スケジュール
+      <span class="nav-badge" id="badge-schedule">8</span>
+    </div>
+    <div class="nav-item" onclick="showSection('log',this)" data-title="感情ログ">
+      <span class="nav-icon">🎭</span> 感情ログ
+      <span class="nav-badge" id="badge-log" style="display:none">0</span>
+    </div>
+    <div class="nav-item" onclick="showSection('ranking',this)" data-title="個人ランキング">
+      <span class="nav-icon">🏆</span> ランキング
+      <span class="nav-badge" id="badge-rank" style="display:none">0</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="season-badge">
+      <span class="season-dot"></span>
+      2026 冬アニメ
+    </div>
+  </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">週次運行表</div>
+    <div class="topbar-right">
+      <div class="stats-pill">
+        <span>視聴中 <strong>8</strong></span>
+        <span>ログ <strong id="stat-logs">0</strong></span>
+        <span>ランキング <strong id="stat-ranks">0</strong></span>
+      </div>
+      <div class="view-toggle" id="view-toggle" style="display:none">
+        <button class="vt-btn active" onclick="setView('list',this)">≡ リスト</button>
+        <button class="vt-btn" onclick="setView('grid',this)">⊞ カレンダー</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- SCHEDULE -->
+    <div class="section active" id="section-schedule">
+      <div class="section-header">
+        <div class="section-heading">今期 運行表</div>
+        <div class="view-toggle">
+          <button class="vt-btn active" onclick="setView('list',this)">≡ リスト</button>
+          <button class="vt-btn" onclick="setView('grid',this)">⊞ 曜日別</button>
+        </div>
+      </div>
+      <div id="schedule-list-view" class="list-view"></div>
+      <div id="schedule-grid-view" class="week-grid" style="display:none"></div>
+    </div>
+
+    <!-- LOG -->
+    <div class="section" id="section-log">
+      <div class="section-heading" style="margin-bottom:20px">感情ログ</div>
+      <div class="log-layout">
+        <div class="log-form-panel">
+          <label class="form-label">作品</label>
+          <select class="form-select" id="log-anime-sel"></select>
+          <label class="form-label">話数</label>
+          <input class="form-input" type="number" id="log-ep" placeholder="例：3" min="1" max="99">
+          <label class="form-label">メモ・感想</label>
+          <textarea class="form-textarea" id="log-memo" placeholder="視聴直後の感情、考察、叫び…なんでも"></textarea>
+          <label class="form-label">感情</label>
+          <div class="form-emotions">
+            <button class="fe-btn kami" onclick="toggleFE(this,'kami')">✨ 神</button>
+            <button class="fe-btn yoin" onclick="toggleFE(this,'yoin')">🌊 余韻</button>
+            <button class="fe-btn fubin" onclick="toggleFE(this,'fubin')">💔 不憫</button>
+          </div>
+          <button class="save-btn" onclick="saveLog()">ログを記録する</button>
+        </div>
+        <div class="log-entries" id="log-entries"></div>
+      </div>
+    </div>
+
+    <!-- RANKING -->
+    <div class="section" id="section-ranking">
+      <div class="section-heading" style="margin-bottom:20px">個人ランキング</div>
+      <div class="rank-layout">
+        <div class="rank-form-panel">
+          <label class="form-label">カテゴリ</label>
+          <select class="form-select" id="rank-cat">
+            <option value="hero">主人公</option>
+            <option value="heroine">ヒロイン</option>
+            <option value="makeheroine">負けヒロイン</option>
+            <option value="work">作品全体</option>
+          </select>
+          <label class="form-label">作品</label>
+          <select class="form-select" id="rank-anime-sel"></select>
+          <label class="form-label">キャラ名（任意）</label>
+          <input class="form-input" type="text" id="rank-chara" placeholder="例：〇〇ちゃん">
+          <label class="form-label">評価スコア</label>
+          <div class="slider-row">
+            <label>スコア</label>
+            <input type="range" id="rank-score" min="1" max="10" value="8"
+              oninput="document.getElementById('rsv').textContent=this.value">
+            <span class="val" id="rsv">8</span>
+          </div>
+          <button class="save-btn" onclick="saveRanking()">追加する</button>
+        </div>
+        <div>
+          <div class="rank-tabs">
+            <button class="rank-tab active" onclick="showRankTab('hero',this)">主人公</button>
+            <button class="rank-tab" onclick="showRankTab('heroine',this)">ヒロイン</button>
+            <button class="rank-tab" onclick="showRankTab('makeheroine',this)">負けヒロイン</button>
+            <button class="rank-tab" onclick="showRankTab('work',this)">作品全体</button>
+          </div>
+          <div class="rank-items" id="rank-items"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// データ定義
+// ============================================================
+const ANIMES = [
+  { id:'himetou',    title:'姫様拷問の時間です', emoji:'👑', day:1, time:'23:30', platform:'ABEMA',              pk:'abema', note:'最速' },
+  { id:'oshinoko',   title:'推しの子',           emoji:'⭐', day:3, time:'23:00', platform:'ABEMA',              pk:'abema', note:'' },
+  { id:'toumei',     title:'透明男と人間女',     emoji:'👻', day:4, time:'24:00', platform:'ABEMA / U-NEXT',     pk:'abema', note:'深夜0時' },
+  { id:'frieren',    title:'葬送のフリーレン',   emoji:'🌿', day:6, time:'24:00', platform:'日テレ系',           pk:'tv',    note:'深夜0時' },
+  { id:'medalist',   title:'メダリスト',         emoji:'🥇', day:6, time:'26:00', platform:'テレビ東京系',       pk:'tv',    note:'深夜2時' },
+  { id:'yoinotsuki', title:'うるわしの宵の月',   emoji:'🌙', day:0, time:'17:00', platform:'テレビ',             pk:'tv',    note:'' },
+  { id:'seihantai',  title:'正反対な君と僕',     emoji:'🫶', day:0, time:'17:30', platform:'ABEMA / Prime Video', pk:'prime', note:'先行配信あり' },
+  { id:'ikokunitki', title:'違国日記',           emoji:'📖', day:0, time:'25:00', platform:'ABEMA / Prime Video', pk:'prime', note:'先行配信あり' },
+];
+
+const DAY_JP  = ['日','月','火','水','木','金','土'];
+const DAY_EMO = ['🌞','🌙','🔥','💧','🌲','✨','⚡'];
+const ORDER   = [1,2,3,4,5,6,0];
+
+function ld(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } }
+function sd(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+
+let logs     = ld('as_logs');
+let rankings = ld('as_rankings');
+let selFE    = [];
+let curRankTab = 'hero';
+let curView  = 'list';
+
+// ============================================================
+// ナビ
+// ============================================================
+function showSection(id, el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('topbar-title').textContent = el.dataset.title||'';
+}
+
+// ============================================================
+// スケジュール
+// ============================================================
+function setView(v, btn){
+  curView = v;
+  document.querySelectorAll('.vt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('schedule-list-view').style.display = v==='list'?'flex':'none';
+  document.getElementById('schedule-grid-view').style.display = v==='grid'?'grid':'none';
+}
+
+function renderSchedule(){
+  // リストビュー（曜日グループ）
+  let lhtml = '';
+  for(const dow of ORDER){
+    const items = ANIMES.filter(a=>a.day===dow);
+    if(!items.length) continue;
+    lhtml += `<div style="margin-bottom:20px">
+      <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px">
+        ${DAY_EMO[dow]} ${DAY_JP[dow]}曜日
+        <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
+      </div>`;
+    for(const a of items){
+      lhtml += `<div class="list-card">
+        <span class="lc-emoji">${a.emoji}</span>
+        <div class="lc-info">
+          <div class="lc-title">${a.title}</div>
+          <div class="lc-meta">
+            <span>🕐 ${a.time}</span>
+            <span class="chip-badge ${a.pk}">${a.platform}</span>
+            ${a.note?`<span style="color:var(--muted)">${a.note}</span>`:''}
+          </div>
+        </div>
+        <div class="lc-emotions">
+          <button class="lc-ebtn kami" onclick="quickLog('${a.id}','kami',this)">✨ 神</button>
+          <button class="lc-ebtn yoin" onclick="quickLog('${a.id}','yoin',this)">🌊 余韻</button>
+          <button class="lc-ebtn fubin" onclick="quickLog('${a.id}','fubin',this)">💔 不憫</button>
+        </div>
+      </div>`;
+    }
+    lhtml += '</div>';
+  }
+  document.getElementById('schedule-list-view').innerHTML = lhtml;
+
+  // グリッドビュー
+  const today = new Date().getDay();
+  let ghtml = '';
+  for(const dow of ORDER){
+    const items = ANIMES.filter(a=>a.day===dow);
+    const isToday = dow===today;
+    ghtml += `<div class="week-col">
+      <div class="week-day-header ${isToday?'today':''}">${DAY_EMO[dow]} ${DAY_JP[dow]}</div>`;
+    for(const a of items){
+      ghtml += `<div class="schedule-chip">
+        <div class="chip-emoji">${a.emoji}</div>
+        <div class="chip-title">${a.title}</div>
+        <div class="chip-time">${a.time}</div>
+        <div class="chip-badge ${a.pk}">${a.platform}</div>
+        <div class="quick-emotions">
+          <button class="qe-btn kami" onclick="quickLog('${a.id}','kami',this)">神</button>
+          <button class="qe-btn yoin" onclick="quickLog('${a.id}','yoin',this)">余韻</button>
+          <button class="qe-btn fubin" onclick="quickLog('${a.id}','fubin',this)">不憫</button>
+        </div>
+      </div>`;
+    }
+    if(!items.length) ghtml += `<div style="font-size:11px;color:var(--muted);text-align:center;padding:12px;opacity:0.5">—</div>`;
+    ghtml += '</div>';
+  }
+  document.getElementById('schedule-grid-view').innerHTML = ghtml;
+}
+
+function quickLog(animeId, emotion, btn){
+  const a = ANIMES.find(x=>x.id===animeId);
+  logs.unshift({ id:Date.now(), animeId, animeTitle:a.title, animeEmoji:a.emoji, ep:null, memo:'', emotions:[emotion], date:new Date().toLocaleDateString('ja-JP') });
+  sd('as_logs', logs);
+  btn.classList.add('active');
+  updateBadges();
+  renderLogs();
+  showToast(`${a.emoji} ${a.title}に「${eLabel(emotion)}」を記録`);
+}
+
+// ============================================================
+// 感情ログ
+// ============================================================
+function toggleFE(btn, key){
+  btn.classList.toggle('sel');
+  selFE.includes(key) ? selFE=selFE.filter(e=>e!==key) : selFE.push(key);
+}
+
+function saveLog(){
+  const animeId = document.getElementById('log-anime-sel').value;
+  const ep      = document.getElementById('log-ep').value;
+  const memo    = document.getElementById('log-memo').value.trim();
+  if(!animeId){ showToast('作品を選んでください'); return; }
+  if(!selFE.length){ showToast('感情を選んでください'); return; }
+  const a = ANIMES.find(x=>x.id===animeId);
+  logs.unshift({ id:Date.now(), animeId, animeTitle:a.title, animeEmoji:a.emoji, ep:ep||null, memo, emotions:[...selFE], date:new Date().toLocaleDateString('ja-JP') });
+  sd('as_logs', logs);
+  document.getElementById('log-anime-sel').value='';
+  document.getElementById('log-ep').value='';
+  document.getElementById('log-memo').value='';
+  selFE=[]; document.querySelectorAll('.fe-btn').forEach(b=>b.classList.remove('sel'));
+  updateBadges(); renderLogs();
+  showToast('ログを記録しました ✅');
+}
+
+function renderLogs(){
+  const el = document.getElementById('log-entries');
+  if(!logs.length){ el.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>まだログがありません。<br>視聴後に感情を記録しよう。</p></div>`; return; }
+  el.innerHTML = logs.map(l=>`
+    <div class="log-entry">
+      <div class="le-header">
+        <span class="le-emoji">${l.animeEmoji}</span>
+        <span class="le-title">${l.animeTitle}</span>
+        ${l.ep?`<span class="le-ep">第${l.ep}話</span>`:''}
+      </div>
+      <div class="le-tags">${l.emotions.map(e=>`<span class="le-tag ${e}">${eLabel(e)}</span>`).join('')}</div>
+      ${l.memo?`<div class="le-memo">${esc(l.memo)}</div>`:''}
+      <div class="le-date">${l.date}</div>
+    </div>`).join('');
+}
+
+// ============================================================
+// ランキング
+// ============================================================
+function showRankTab(tab, btn){
+  curRankTab=tab;
+  document.querySelectorAll('.rank-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRanking();
+}
+
+function saveRanking(){
+  const cat     = document.getElementById('rank-cat').value;
+  const animeId = document.getElementById('rank-anime-sel').value;
+  const chara   = document.getElementById('rank-chara').value.trim();
+  const score   = parseInt(document.getElementById('rank-score').value);
+  if(!animeId){ showToast('作品を選んでください'); return; }
+  const a = ANIMES.find(x=>x.id===animeId);
+  rankings.push({ id:Date.now(), cat, animeId, animeTitle:a.title, animeEmoji:a.emoji, chara, score, date:new Date().toLocaleDateString('ja-JP') });
+  sd('as_rankings', rankings);
+  document.getElementById('rank-anime-sel').value='';
+  document.getElementById('rank-chara').value='';
+  document.getElementById('rank-score').value=8;
+  document.getElementById('rsv').textContent='8';
+  updateBadges(); renderRanking();
+  showToast('ランキングに追加しました 🏆');
+}
+
+function renderRanking(){
+  const el = document.getElementById('rank-items');
+  const filtered = rankings.filter(r=>r.cat===curRankTab).sort((a,b)=>b.score-a.score);
+  if(!filtered.length){ el.innerHTML=`<div class="empty-state"><div class="icon">🏅</div><p>まだランキングがありません。</p></div>`; return; }
+  const cls = ['r1','r2','r3'];
+  el.innerHTML = filtered.map((r,i)=>`
+    <div class="rank-item">
+      <div class="rk-num ${cls[i]||''}">${i+1}</div>
+      <div class="rk-info">
+        <div class="rk-name">${r.animeEmoji} ${r.chara||r.animeTitle}</div>
+        <div class="rk-work">${r.chara?r.animeTitle:''} ${r.date}</div>
+      </div>
+      <div class="rk-score">${r.score}<span>/10</span></div>
+    </div>`).join('');
+}
+
+// ============================================================
+// バッジ・ステータス更新
+// ============================================================
+function updateBadges(){
+  const bl = document.getElementById('badge-log');
+  const br = document.getElementById('badge-rank');
+  bl.textContent=logs.length; bl.style.display=logs.length?'inline':'none';
+  br.textContent=rankings.length; br.style.display=rankings.length?'inline':'none';
+  document.getElementById('stat-logs').textContent=logs.length;
+  document.getElementById('stat-ranks').textContent=rankings.length;
+}
+
+// ============================================================
+// セレクト初期化
+// ============================================================
+function initSelects(){
+  const opts = ANIMES.map(a=>`<option value="${a.id}">${a.emoji} ${a.title}</option>`).join('');
+  document.getElementById('log-anime-sel').innerHTML  = '<option value="">作品を選ぶ</option>'+opts;
+  document.getElementById('rank-anime-sel').innerHTML = '<option value="">作品を選ぶ</option>'+opts;
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function eLabel(e){ return e==='kami'?'✨ 神':e==='yoin'?'🌊 余韻':'💔 不憫'; }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+initSelects();
+renderSchedule();
+renderLogs();
+renderRanking();
+updateBadges();
+</script>
+</body>
+</html>
