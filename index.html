@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AnimeSync</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #060810;
+  --bg2:     #0a0e18;
+  --bg3:     #0f1520;
+  --bg4:     #141c28;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --accent:  #4db8d4;
+  --accent2: #e8608a;
+  --accent3: #6ec47a;
+  --gold:    #f0c040;
+  --purple:  #9b7fe8;
+  --text:    #e0e8f4;
+  --muted:   #445566;
+  --muted2:  #7a8fa8;
+  --card:    rgba(255,255,255,0.04);
+  --nav-h:   60px;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  min-height: 100vh;
+  padding-bottom: calc(var(--nav-h) + 16px);
+  overflow-x: hidden;
+}
+
+/* ノイズ */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.022'/%3E%3C/svg%3E");
+}
+
+/* ===== TOP NAV ===== */
+.topnav {
+  position: sticky; top:0; z-index:100;
+  height: 52px;
+  background: rgba(6,8,16,0.92);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 0 16px;
+}
+.nav-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 4px;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(77,184,212,0.45);
+}
+.nav-right { display:flex; align-items:center; gap:10px; }
+.nav-icon-btn {
+  width:34px; height:34px; border-radius:8px;
+  background: var(--card); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; cursor:pointer;
+}
+.nav-avatar {
+  width:32px; height:32px; border-radius:50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; color:#060810;
+}
+
+/* ===== BOTTOM NAV ===== */
+.bottomnav {
+  position: fixed; bottom:0; left:0; right:0; z-index:100;
+  height: var(--nav-h);
+  background: rgba(6,8,16,0.96);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border);
+  display: flex; align-items:center;
+}
+.bn-item {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  gap:3px; cursor:pointer; padding:8px 0;
+  font-size:10px; color:var(--muted2); letter-spacing:0.5px;
+  transition: color 0.15s;
+}
+.bn-item.active { color:var(--accent); }
+.bn-item.active .bn-icon { text-shadow: 0 0 12px rgba(77,184,212,0.6); }
+.bn-icon { font-size:20px; }
+
+/* ===== MAIN SCROLL ===== */
+main { position:relative; z-index:1; }
+
+/* セクション共通 */
+.sec { padding: 20px 16px 0; }
+.sec-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 14px;
+}
+.sec-title {
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 15px; font-weight:900; letter-spacing:1px;
+  display:flex; align-items:center; gap:8px;
+}
+.sec-title-dot {
+  width:6px; height:6px; border-radius:50%;
+}
+.sec-more {
+  font-size:11px; color:var(--muted2); letter-spacing:1px;
+  display:flex; align-items:center; gap:2px;
+}
+
+/* ===== HERO: 今日の放映 ===== */
+.hero {
+  margin: 0 0 0;
+  padding: 14px 16px 0;
+}
+.hero-label {
+  font-size:10px; letter-spacing:3px; color:var(--muted2);
+  margin-bottom:10px; display:flex; align-items:center; gap:8px;
+}
+.live-dot {
+  width:6px; height:6px; border-radius:50%;
+  background: var(--accent2);
+  box-shadow: 0 0 8px var(--accent2);
+  animation: blink 1.4s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.today-card {
+  background: linear-gradient(135deg, rgba(77,184,212,0.12) 0%, rgba(155,127,232,0.08) 100%);
+  border: 1px solid rgba(77,184,212,0.25);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 10px;
+  position: relative; overflow:hidden;
+  animation: cardIn 0.4s ease both;
+}
+.today-card::before {
+  content:''; position:absolute; top:-40px; right:-40px;
+  width:120px; height:120px; border-radius:50%;
+  background: radial-gradient(circle, rgba(77,184,212,0.1), transparent 70%);
+}
+@keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.today-card-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.today-emoji { font-size:32px; }
+.today-info { flex:1; }
+.today-title { font-weight:700; font-size:17px; line-height:1.3; margin-bottom:4px; }
+.today-time { font-size:12px; color:var(--muted2); display:flex; align-items:center; gap:6px; }
+.platform-chip {
+  font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px;
+  letter-spacing:0.5px;
+}
+.pc-abema { background:rgba(232,96,138,0.2); color:var(--accent2); border:1px solid rgba(232,96,138,0.35); }
+.pc-prime { background:rgba(110,196,122,0.2); color:var(--accent3); border:1px solid rgba(110,196,122,0.35); }
+.pc-unext { background:rgba(240,192,64,0.2); color:var(--gold); border:1px solid rgba(240,192,64,0.35); }
+.pc-tv    { background:rgba(255,255,255,0.08); color:var(--muted2); border:1px solid var(--border2); }
+
+.today-emotions { display:flex; gap:8px; }
+.te-btn {
+  flex:1; padding:9px 4px; border-radius:10px; cursor:pointer;
+  border:1px solid var(--border2); background:rgba(255,255,255,0.04);
+  font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:700;
+  color:var(--muted2); transition:all 0.15s; text-align:center;
+}
+.te-btn:active { transform:scale(0.96); }
+.te-btn.tapped.kami { background:rgba(240,192,64,0.18); border-color:rgba(240,192,64,0.5); color:var(--gold); }
+.te-btn.tapped.yoin { background:rgba(77,184,212,0.18); border-color:rgba(77,184,212,0.5); color:var(--accent); }
+.te-btn.tapped.fubin { background:rgba(232,96,138,0.18); border-color:rgba(232,96,138,0.5); color:var(--accent2); }
+
+/* 今週の予定バー */
+.week-strip {
+  display:flex; gap:6px; overflow-x:auto; padding:0 16px 2px;
+  scrollbar-width:none; margin-top:14px;
+}
+.week-strip::-webkit-scrollbar { display:none; }
+.ws-item {
+  flex-shrink:0; background:var(--bg3); border:1px solid var(--border);
+  border-radius:10px; padding:8px 10px; min-width:72px; text-align:center;
+  cursor:pointer; transition:all 0.15s;
+}
+.ws-item.today-mark { border-color:rgba(77,184,212,0.4); background:rgba(77,184,212,0.08); }
+.ws-day { font-size:9px; color:var(--muted2); letter-spacing:1px; margin-bottom:4px; }
+.ws-emoji { font-size:18px; margin-bottom:2px; }
+.ws-count { font-size:9px; color:var(--muted2); }
+.ws-item.today-mark .ws-day { color:var(--accent); }
+
+/* ===== RANKING ===== */
+.ranking-scroll {
+  display:flex; gap:10px; overflow-x:auto; padding:0 16px 4px;
+  scrollbar-width:none;
+}
+.ranking-scroll::-webkit-scrollbar { display:none; }
+.rank-card {
+  flex-shrink:0; width:140px;
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:14px; padding:14px 12px;
+  position:relative; overflow:hidden;
+  animation: cardIn 0.4s ease both;
+}
+.rank-card:nth-child(2) { animation-delay:0.05s; }
+.rank-card:nth-child(3) { animation-delay:0.1s; }
+.rank-card:nth-child(4) { animation-delay:0.15s; }
+
+.rank-num-big {
+  font-family:'Bebas Neue',sans-serif; font-size:48px; line-height:1;
+  position:absolute; top:8px; right:10px; opacity:0.12;
+}
+.rank-card:nth-child(1) .rank-num-big { color:var(--gold); opacity:0.2; }
+.rank-card:nth-child(2) .rank-num-big { color:#90a4ae; }
+.rank-card:nth-child(3) .rank-num-big { color:#a1887f; }
+
+.rank-emoji-big { font-size:26px; margin-bottom:6px; }
+.rank-title-text { font-weight:700; font-size:13px; line-height:1.3; margin-bottom:4px; }
+.rank-category { font-size:10px; color:var(--muted2); }
+.rank-score-row { display:flex; align-items:baseline; gap:2px; margin-top:8px; }
+.rank-score-num { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--accent); }
+.rank-score-max { font-size:10px; color:var(--muted); }
+
+/* ===== 話題の作品 ===== */
+.trending-scroll {
+  display:flex; gap:10px; overflow-x:auto; padding:0 16px 4px;
+  scrollbar-width:none;
+}
+.trending-scroll::-webkit-scrollbar { display:none; }
+.trend-card {
+  flex-shrink:0; width:130px;
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden;
+  animation: cardIn 0.5s ease both;
+}
+.trend-thumb {
+  width:100%; height:80px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:36px; position:relative;
+}
+.trend-thumb-bg {
+  position:absolute; inset:0;
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+}
+.trend-thumb-emoji { position:relative; z-index:1; }
+.trend-body { padding:10px 10px 12px; }
+.trend-title { font-weight:700; font-size:12px; line-height:1.3; margin-bottom:5px; }
+.trend-heat {
+  display:flex; align-items:center; gap:4px; font-size:10px; color:var(--muted2);
+}
+.heat-bar {
+  flex:1; height:3px; background:var(--bg4); border-radius:2px; overflow:hidden;
+}
+.heat-fill { height:100%; border-radius:2px; background:var(--accent2); }
+
+/* ===== コミュニティ ===== */
+.community-preview {
+  margin: 0 16px;
+  background: linear-gradient(135deg, rgba(155,127,232,0.1), rgba(232,96,138,0.06));
+  border: 1px solid rgba(155,127,232,0.2);
+  border-radius: 16px;
+  padding: 16px;
+  position:relative; overflow:hidden;
+}
+.community-preview::after {
+  content:''; position:absolute; bottom:-30px; right:-30px;
+  width:100px; height:100px; border-radius:50%;
+  background: radial-gradient(circle, rgba(155,127,232,0.15), transparent 70%);
+}
+.cp-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.cp-icon { font-size:22px; }
+.cp-title { font-weight:700; font-size:15px; }
+.cp-live { font-size:10px; color:var(--accent2); letter-spacing:1px; display:flex; align-items:center; gap:4px; margin-left:auto; }
+
+.cp-threads { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.cp-thread {
+  background: rgba(255,255,255,0.04); border:1px solid var(--border);
+  border-radius:10px; padding:10px 12px;
+  display:flex; align-items:center; gap:10px;
+}
+.cp-thread-emoji { font-size:18px; flex-shrink:0; }
+.cp-thread-info { flex:1; }
+.cp-thread-title { font-size:12px; font-weight:700; margin-bottom:2px; }
+.cp-thread-meta { font-size:10px; color:var(--muted2); }
+.cp-thread-count {
+  font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--purple);
+  flex-shrink:0;
+}
+
+.cp-join-btn {
+  width:100%; padding:11px; border-radius:10px;
+  background: rgba(155,127,232,0.18); border:1px solid rgba(155,127,232,0.35);
+  color:var(--purple); font-family:'Zen Kaku Gothic New',sans-serif;
+  font-size:13px; font-weight:700; cursor:pointer; letter-spacing:2px;
+  transition:all 0.15s;
+}
+.cp-join-btn:active { transform:scale(0.98); opacity:0.85; }
+
+/* ===== トースト ===== */
+.toast {
+  position:fixed; bottom:calc(var(--nav-h) + 16px); left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--bg4); border:1px solid var(--border2);
+  border-radius:24px; padding:10px 20px;
+  font-size:13px; z-index:200; opacity:0;
+  transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.5);
+  pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* セクション間スペース */
+.spacer { height:24px; }
+.spacer-sm { height:14px; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="nav-logo">AnimeSync</div>
+  <div class="nav-right">
+    <div class="nav-icon-btn">🔔</div>
+    <div class="nav-icon-btn">🔍</div>
+    <div class="nav-avatar">A</div>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ① 今日の放映 -->
+  <div class="hero">
+    <div class="hero-label">
+      <span class="live-dot"></span>
+      TODAY — 今日放映
+    </div>
+
+    <!-- 今日の作品カード（動的に生成） -->
+    <div id="today-cards"></div>
+  </div>
+
+  <!-- 今週の予定バー -->
+  <div class="week-strip" id="week-strip"></div>
+
+  <div class="spacer"></div>
+
+  <!-- ② ランキング -->
+  <div class="sec">
+    <div class="sec-header">
+      <div class="sec-title">
+        <span class="sec-title-dot" style="background:var(--gold)"></span>
+        今期ランキング
+      </div>
+      <div class="sec-more">もっと見る ›</div>
+    </div>
+  </div>
+  <div class="ranking-scroll" id="ranking-scroll"></div>
+
+  <div class="spacer"></div>
+
+  <!-- ③ 話題の作品 -->
+  <div class="sec">
+    <div class="sec-header">
+      <div class="sec-title">
+        <span class="sec-title-dot" style="background:var(--accent2)"></span>
+        話題の作品
+      </div>
+      <div class="sec-more">もっと見る ›</div>
+    </div>
+  </div>
+  <div class="trending-scroll" id="trending-scroll"></div>
+
+  <div class="spacer"></div>
+
+  <!-- ④ コミュニティ -->
+  <div class="sec">
+    <div class="sec-header">
+      <div class="sec-title">
+        <span class="sec-title-dot" style="background:var(--purple)"></span>
+        コミュニティ
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 16px">
+    <div class="community-preview">
+      <div class="cp-header">
+        <span class="cp-icon">💬</span>
+        <span class="cp-title">リアタイ実況中</span>
+        <span class="cp-live"><span class="live-dot"></span> LIVE</span>
+      </div>
+      <div class="cp-threads" id="cp-threads"></div>
+      <button class="cp-join-btn">コミュニティに参加する</button>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+</main>
+
+<!-- BOTTOM NAV -->
+<nav class="bottomnav">
+  <div class="bn-item active">
+    <span class="bn-icon">🏠</span>
+    <span>ホーム</span>
+  </div>
+  <div class="bn-item">
+    <span class="bn-icon">📅</span>
+    <span>スケジュール</span>
+  </div>
+  <div class="bn-item">
+    <span class="bn-icon">🏆</span>
+    <span>ランキング</span>
+  </div>
+  <div class="bn-item">
+    <span class="bn-icon">💬</span>
+    <span>コミュニティ</span>
+  </div>
+  <div class="bn-item">
+    <span class="bn-icon">👤</span>
+    <span>マイページ</span>
+  </div>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// データ
+// ============================================================
+const ANIMES = [
+  { id:'himetou',    title:'姫様拷問の時間です', emoji:'👑', day:1, time:'23:30', platform:'ABEMA',              pk:'abema', note:'最速', color1:'#1a0a20', color2:'#2d0e3a', heat:92 },
+  { id:'oshinoko',   title:'推しの子',           emoji:'⭐', day:3, time:'23:00', platform:'ABEMA',              pk:'abema', note:'',     color1:'#0a1020', color2:'#0e1a38', heat:88 },
+  { id:'toumei',     title:'透明男と人間女',     emoji:'👻', day:4, time:'24:00', platform:'ABEMA / U-NEXT',     pk:'abema', note:'深夜0時', color1:'#081818', color2:'#0c2828', heat:74 },
+  { id:'frieren',    title:'葬送のフリーレン',   emoji:'🌿', day:6, time:'24:00', platform:'日テレ系',           pk:'tv',    note:'深夜0時', color1:'#081408', color2:'#0e220e', heat:96 },
+  { id:'medalist',   title:'メダリスト',         emoji:'🥇', day:6, time:'26:00', platform:'テレビ東京系',       pk:'tv',    note:'深夜2時', color1:'#181208', color2:'#2a1e08', heat:85 },
+  { id:'yoinotsuki', title:'うるわしの宵の月',   emoji:'🌙', day:0, time:'17:00', platform:'テレビ',            pk:'tv',    note:'',       color1:'#08101a', color2:'#0c1a2e', heat:79 },
+  { id:'seihantai',  title:'正反対な君と僕',     emoji:'🫶', day:0, time:'17:30', platform:'ABEMA / Prime Video',pk:'prime', note:'先行配信あり', color1:'#180808', color2:'#2e0e0e', heat:83 },
+  { id:'ikokunitki', title:'違国日記',           emoji:'📖', day:0, time:'25:00', platform:'ABEMA / Prime Video',pk:'prime', note:'先行配信あり', color1:'#0a0a18', color2:'#14142a', heat:77 },
+];
+
+const DAYS = ['日','月','火','水','木','金','土'];
+const EMOJIS = ['🌞','🌙','🔥','💧','🌲','✨','⚡'];
+const ORDER = [1,2,3,4,5,6,0];
+
+// モックランキング
+const RANKINGS = [
+  { rank:1, anime:ANIMES[3], cat:'作品', score:9.6 },
+  { rank:2, anime:ANIMES[0], cat:'作品', score:9.1 },
+  { rank:3, anime:ANIMES[1], cat:'作品', score:8.8 },
+  { rank:4, anime:ANIMES[4], cat:'作品', score:8.5 },
+];
+
+// モックコミュニティスレッド
+const THREADS = [
+  { anime:ANIMES[3], ep:8,  text:'第8話の演出がやばすぎる', count:342 },
+  { anime:ANIMES[0], ep:7,  text:'ヒロイン争い激化してる', count:218 },
+  { anime:ANIMES[1], ep:9,  text:'今週の衝撃展開について', count:187 },
+];
+
+// ============================================================
+// 今日の放映
+// ============================================================
+function renderToday() {
+  const today = new Date().getDay();
+  const todayAnimes = ANIMES.filter(a => a.day === today);
+  const container = document.getElementById('today-cards');
+
+  if (!todayAnimes.length) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:24px;color:var(--muted2);font-size:13px;">
+        <div style="font-size:28px;margin-bottom:8px">🌙</div>
+        今日の放映はありません<br>
+        <span style="font-size:11px;color:var(--muted)">次は${getNextDay()}です</span>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = todayAnimes.map((a, i) => `
+    <div class="today-card" style="animation-delay:${i*0.08}s">
+      <div class="today-card-top">
+        <div class="today-emoji">${a.emoji}</div>
+        <div class="today-info">
+          <div class="today-title">${a.title}</div>
+          <div class="today-time">
+            🕐 ${a.time}
+            <span class="platform-chip pc-${a.pk}">${a.platform}</span>
+            ${a.note ? `<span style="font-size:10px;color:var(--muted2)">${a.note}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="today-emotions">
+        <button class="te-btn kami" onclick="tapEmotion(this,'kami','${a.id}')">✨ 神</button>
+        <button class="te-btn yoin" onclick="tapEmotion(this,'yoin','${a.id}')">🌊 余韻</button>
+        <button class="te-btn fubin" onclick="tapEmotion(this,'fubin','${a.id}')">💔 不憫</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function tapEmotion(btn, type, animeId) {
+  const anime = ANIMES.find(a => a.id === animeId);
+  const siblings = btn.parentElement.querySelectorAll('.te-btn');
+  siblings.forEach(b => b.classList.remove('tapped', 'kami', 'yoin', 'fubin'));
+  btn.classList.add('tapped', type);
+  const labels = { kami:'✨ 神', yoin:'🌊 余韻', fubin:'💔 不憫' };
+  showToast(`${anime.emoji} ${labels[type]} を記録しました`);
+}
+
+// ============================================================
+// 今週バー
+// ============================================================
+function renderWeekStrip() {
+  const today = new Date().getDay();
+  const strip = document.getElementById('week-strip');
+  strip.innerHTML = ORDER.map(dow => {
+    const items = ANIMES.filter(a => a.day === dow);
+    const isToday = dow === today;
+    return `
+      <div class="ws-item ${isToday ? 'today-mark' : ''}">
+        <div class="ws-day">${EMOJIS[dow]} ${DAYS[dow]}</div>
+        ${items.length ? items.map(a => `<div class="ws-emoji">${a.emoji}</div>`).join('') : '<div style="font-size:10px;color:var(--muted);padding:6px 0">—</div>'}
+        ${items.length ? `<div class="ws-count">${items.length}本</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+// ランキング
+// ============================================================
+function renderRanking() {
+  const el = document.getElementById('ranking-scroll');
+  el.innerHTML = RANKINGS.map((r, i) => `
+    <div class="rank-card">
+      <div class="rank-num-big">${r.rank}</div>
+      <div class="rank-emoji-big">${r.anime.emoji}</div>
+      <div class="rank-title-text">${r.anime.title}</div>
+      <div class="rank-category">${r.cat}ランキング</div>
+      <div class="rank-score-row">
+        <span class="rank-score-num">${r.score}</span>
+        <span class="rank-score-max">/10</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// 話題の作品
+// ============================================================
+function renderTrending() {
+  const sorted = [...ANIMES].sort((a, b) => b.heat - a.heat).slice(0, 5);
+  const el = document.getElementById('trending-scroll');
+  el.innerHTML = sorted.map((a, i) => `
+    <div class="trend-card" style="animation-delay:${i*0.06}s">
+      <div class="trend-thumb">
+        <div class="trend-thumb-bg" style="--c1:${a.color1};--c2:${a.color2}"></div>
+        <div class="trend-thumb-emoji">${a.emoji}</div>
+      </div>
+      <div class="trend-body">
+        <div class="trend-title">${a.title}</div>
+        <div class="trend-heat">
+          🔥
+          <div class="heat-bar"><div class="heat-fill" style="width:${a.heat}%"></div></div>
+          ${a.heat}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// コミュニティ
+// ============================================================
+function renderCommunity() {
+  const el = document.getElementById('cp-threads');
+  el.innerHTML = THREADS.map(t => `
+    <div class="cp-thread">
+      <span class="cp-thread-emoji">${t.anime.emoji}</span>
+      <div class="cp-thread-info">
+        <div class="cp-thread-title">${t.text}</div>
+        <div class="cp-thread-meta">${t.anime.title} 第${t.ep}話</div>
+      </div>
+      <div class="cp-thread-count">${t.count}</div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function getNextDay() {
+  const today = new Date().getDay();
+  for (const dow of ORDER) {
+    if (ANIMES.some(a => a.day === dow) && dow !== today) {
+      return `${DAYS[dow]}曜日`;
+    }
+  }
+  return '次の放映日';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+renderToday();
+renderWeekStrip();
+renderRanking();
+renderTrending();
+renderCommunity();
+</script>
+</body>
+</html>
