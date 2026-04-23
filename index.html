@@ -399,15 +399,15 @@ main { position:relative; z-index:1; }
 
 <!-- BOTTOM NAV -->
 <nav class="bottomnav">
-  <div class="bn-item active">
+  <div class="bn-item active" onclick="location.href='index.html'">
     <span class="bn-icon">🏠</span>
     <span>ホーム</span>
   </div>
-  <div class="bn-item">
+  <div class="bn-item" onclick="location.href='animesync_calendar.html'">
     <span class="bn-icon">📅</span>
     <span>スケジュール</span>
   </div>
-  <div class="bn-item">
+  <div class="bn-item" onclick="location.href='animesync.html#ranking'">
     <span class="bn-icon">🏆</span>
     <span>ランキング</span>
   </div>
@@ -415,7 +415,7 @@ main { position:relative; z-index:1; }
     <span class="bn-icon">💬</span>
     <span>コミュニティ</span>
   </div>
-  <div class="bn-item">
+  <div class="bn-item" onclick="location.href='animesync_pc.html'">
     <span class="bn-icon">👤</span>
     <span>マイページ</span>
   </div>
@@ -431,7 +431,7 @@ const ANIMES = [
   // 月曜
   { id:'tongari',    title:'とんがり帽子のアトリエ',         emoji:'🧙', day:1, time:'23:00', platform:'Netflix',      pk:'unext', note:'先行', color1:'#0a1020', color2:'#142040', heat:88 },
   // 火曜
-  { id:'replica',    title:'レプリカだった恋をする',          emoji:'💘', day:2, time:'24:00', platform:'ABEMA',        pk:'abema', note:'先行', color1:'#1a0810', color2:'#300e20', heat:82 },
+  { id:'replica',    title:'レプリカだって恋をする',          emoji:'💘', day:2, time:'24:00', platform:'ABEMA',        pk:'abema', note:'先行', color1:'#1a0810', color2:'#300e20', heat:82 },
   { id:'aisiteru',   title:'愛してるゲームを終わらせたい',    emoji:'🎮', day:2, time:'23:30', platform:'ABEMA',        pk:'abema', note:'先行', color1:'#180a0a', color2:'#2e1010', heat:85 },
   { id:'hidari',     title:'左ききのエレン',                  emoji:'🎨', day:2, time:'24:30', platform:'Prime Video',  pk:'prime', note:'先行', color1:'#0a1218', color2:'#102030', heat:80 },
   { id:'otaku',      title:'クラスで2番目に可愛い女の子と友だちになった', emoji:'🎀', day:2, time:'24:00', platform:'U-NEXT', pk:'unext', note:'', color1:'#1a0a18', color2:'#2e1030', heat:79 },
