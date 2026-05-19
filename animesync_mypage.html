@@ -88,24 +88,25 @@ body{background:var(--bg);color:var(--text);font-family:"Hiragino Kaku Gothic Pr
 </nav>
 <div class="toast" id="toast"></div>
 <script>
-var A = [
-  {id:"tongari",t:"とんがり帽子のアトリエ",e:"🧙",p:"Netflix",pk:"unext",img:"./tongariboushi.jpg"},
-  {id:"replica",t:"レプリカだって恋をする",e:"💘",p:"ABEMA",pk:"abema",img:"./repurica.jpg"},
-  {id:"marriage",t:"マリッジトキシン",e:"💍",p:"Netflix",pk:"unext",img:"./maridgetokishin.jpg"},
-  {id:"aisiteru",t:"愛してるゲームを終わらせたい",e:"🎮",p:"ABEMA",pk:"abema",img:"./aishiterugame.jpg"},
-  {id:"hidari",t:"左ききのエレン",e:"🎨",p:"Prime Video",pk:"prime",img:"./hidarikikinoeren.jpg"},
-  {id:"otaku",t:"クラスで2番目に可愛い女の子と友だちになった",e:"🎀",p:"U-NEXT",pk:"unext",img:"./classde2banme.jpg"},
-  {id:"awashima",t:"淡島百景",e:"🌸",p:"ABEMA",pk:"abema",img:"./awashimahyakkei.jpg"},
-  {id:"ichitatami",t:"一畳間まんきつ暮らし！",e:"🍜",p:"ABEMA",pk:"abema",img:"./1jyohan.jpg"},
-  {id:"koori",t:"氷の城壁",e:"🧊",p:"Netflix",pk:"unext",img:"./koorinojyoheki.jpg"},
-  {id:"kiriwo",t:"霧尾ファンクラブ",e:"🌁",p:"ABEMA",pk:"abema",img:"./kiriofunclub.jpg"},
-  {id:"kamiike",t:"上伊那ぼたん、酔える姿は百合の花",e:"🌺",p:"ABEMA",pk:"abema",img:"./kamiinabotan.jpg"},
-  {id:"otaku2",t:"オタクに優しいギャルはいない",e:"💅",p:"ABEMA",pk:"abema",img:"./otakuniyasashii.jpg"},
-  {id:"haruyuki",t:"春夏秋冬代行者",e:"🍂",p:"Netflix",pk:"unext",img:"./syunkasyuutou.jpg"},
-  {id:"kaminiwa",t:"神の庭付き楠木邸",e:"🌳",p:"ABEMA",pk:"abema",img:"./kaminoniwa.jpg"},
-  {id:"akane",t:"あかね噺",e:"🎭",p:"Netflix",pk:"unext",img:"./akanebanashi.jpg"},
-  {id:"nihonsangoku",t:"日本三國",e:"⚔",p:"Prime Video",pk:"prime",img:"./nihonsankoku.jpg"}
-];
+var A = (function(){
+  // ── しょぼいカレンダー連携: 選択作品(as_my_season)のみを読み込む ──
+  try {
+    var v = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+    if (!Array.isArray(v)) return [];
+    return v.map(function(x){
+      return Object.assign({}, x, {
+        img:         x.img || x.imageUrl || '',
+        imageUrl:    x.imageUrl || x.img || '',
+        platformKey: x.platformKey || x.pk || 'tv',
+        color:       x.color || x.color1 || '#1a2040',
+        score:       (typeof x.score === 'number') ? x.score : 0,
+        heat:        (typeof x.heat  === 'number') ? x.heat  : 0,
+        total:       (typeof x.total === 'number') ? x.total : 0,
+        t: x.title, e: x.emoji, p: x.platform
+      });
+    });
+  } catch (e) { return []; }
+})();
 var SC = {kami:5,yoin:3,fubin:1};
 var SK = "as_rank_season_2026spring";
 
@@ -129,6 +130,11 @@ function sw(tab, btn) {
 
 function drawW() {
   var wd = ld(gwk());
+  if (!A.length) {
+    document.getElementById("tw").innerHTML =
+      "<div class='empty'><p>作品が未選択です。<br><a href='animesync_discover.html' style='color:var(--accent);font-weight:700'>📡 今期から追加</a><br>でしょぼいカレンダーから作品を選べます。</p></div>";
+    return;
+  }
   var h = "";
   for (var i=0; i<A.length; i++) {
     var a = A[i];

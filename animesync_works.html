@@ -373,116 +373,25 @@ main { position:relative; z-index:1; padding:16px; }
 // アニメデータ
 // ★ imageUrl に各公式サイトの画像URLを入れてください
 // ============================================================
-const ANIMES = [
-  {
-    id:'tongari', title:'とんがり帽子のアトリエ', emoji:'🧙',
-    day:1, dayLabel:'月', time:'23:00', platform:'Netflix', pk:'unext', note:'先行',
-    imageUrl:'./tongariboushi.jpg', // ← ここに画像URLを入れる
-    color1:'#1a2040', color2:'#2a3060',
-  },
-  {
-    id:'replica', title:'レプリカだって恋をする', emoji:'💘',
-    day:2, dayLabel:'火', time:'24:00', platform:'ABEMA', pk:'abema', note:'先行',
-    imageUrl:'./repurica.jpg',
-    color1:'#2a1020', color2:'#3a1830',
-  },
-  {
-    id:'marriage', title:'マリッジトキシン', emoji:'💍',
-    day:2, dayLabel:'火', time:'23:00', platform:'Netflix', pk:'unext', note:'',
-    imageUrl:'./maridgetokishin.jpg',
-    color1:'#1a1030', color2:'#2a1840',
-  },
-  {
-    id:'aisiteru', title:'愛してるゲームを終わらせたい', emoji:'🎮',
-    day:2, dayLabel:'火', time:'23:30', platform:'ABEMA', pk:'abema', note:'先行',
-    imageUrl:'./aishiterugame.jpg',
-    color1:'#201018', color2:'#301820',
-  },
-  {
-    id:'hidari', title:'左ききのエレン', emoji:'🎨',
-    day:2, dayLabel:'火', time:'24:30', platform:'Prime Video', pk:'prime', note:'先行',
-    imageUrl:'./hidarikikinoeren.jpg',
-    color1:'#102020', color2:'#183030',
-  },
-  {
-    id:'otaku', title:'クラスで2番目に可愛い女の子と友だちになった', emoji:'🎀',
-    day:2, dayLabel:'火', time:'24:00', platform:'U-NEXT', pk:'unext', note:'',
-    imageUrl:'./classde2banme.jpg',
-    color1:'#201828', color2:'#302038',
-  },
-  {
-    id:'awashima', title:'淡島百景', emoji:'🌸',
-    day:2, dayLabel:'火', time:'26:15', platform:'ABEMA', pk:'abema', note:'',
-    imageUrl:'./awashimahyakkei.jpg',
-    color1:'#281020', color2:'#381830',
-  },
-  {
-    id:'ichitatami', title:'一畳間まんきつ暮らし！', emoji:'🍜',
-    day:2, dayLabel:'火', time:'26:00', platform:'ABEMA', pk:'abema', note:'',
-    imageUrl:'./1jyohan.jpg',
-    color1:'#182010', color2:'#283018',
-  },
-  {
-    id:'koori', title:'氷の城壁', emoji:'🧊',
-    day:4, dayLabel:'木', time:'24:30', platform:'Netflix', pk:'unext', note:'先行',
-    imageUrl:'./koorinojyoheki.jpg',
-    color1:'#102030', color2:'#183040',
-  },
-  {
-    id:'kiriwo', title:'霧尾ファンクラブ', emoji:'🌫️',
-    day:4, dayLabel:'木', time:'25:00', platform:'ABEMA', pk:'abema', note:'',
-    imageUrl:'./kiriofunclub.jpg',
-    color1:'#181820', color2:'#282830',
-  },
-  {
-    id:'kamiike', title:'上伊那ぼたん、酔える姿は百合の花', emoji:'🌺',
-    day:5, dayLabel:'金', time:'24:00', platform:'ABEMA', pk:'abema', note:'先行',
-    imageUrl:'./kamiinabotan.jpg',
-    color1:'#281018', color2:'#381820',
-  },
-  {
-    id:'otaku2', title:'オタクに優しいギャルはいない', emoji:'💅',
-    day:6, dayLabel:'土', time:'12:00', platform:'ABEMA', pk:'abema', note:'',
-    imageUrl:'./otakuniyasashii.jpg',
-    color1:'#201020', color2:'#301830',
-  },
-  {
-    id:'haruyuki', title:'春夏秋冬代行者', emoji:'🍂',
-    day:6, dayLabel:'土', time:'24:00', platform:'Netflix', pk:'unext', note:'',
-    imageUrl:'./syunkasyuutou.jpg',
-    color1:'#201810', color2:'#302018',
-  },
-  {
-    id:'kaminiwa', title:'神の庭付き楠木邸', emoji:'🌳',
-    day:6, dayLabel:'土', time:'26:00', platform:'ABEMA', pk:'abema', note:'先行',
-    imageUrl:'./kaminoniwa.jpg',
-    color1:'#102010', color2:'#183018',
-  },
-  {
-    id:'akane', title:'あかね噺', emoji:'🎭',
-    day:0, dayLabel:'日', time:'24:00', platform:'Netflix', pk:'unext', note:'先行',
-    imageUrl:'./akanebanashi.jpg',
-    color1:'#281010', color2:'#381818',
-  },
-  {
-    id:'nihonsangoku', title:'日本三國', emoji:'⚔️',
-    day:0, dayLabel:'日', time:'21:00', platform:'Prime Video', pk:'prime', note:'先行',
-    imageUrl:'./nihonsankoku.jpg',
-    color1:'#201010', color2:'#301818',
-  },
-];
-
-// ── しょぼいカレンダー連携: 「今期から追加」(animesync_discover.html) で
-//    選んだ作品を、重複しないように ANIMES へ取り込む ──
-try {
-  const __my = JSON.parse(localStorage.getItem('as_my_season') || '[]');
-  if (Array.isArray(__my)) {
-    const __have = new Set(ANIMES.map(a => a.id));
-    __my.forEach(a => {
-      if (a && a.id && !__have.has(a.id)) { ANIMES.push(a); __have.add(a.id); }
+const ANIMES = (function(){
+  // ── しょぼいカレンダー連携: 選択作品(as_my_season)のみを読み込む ──
+  try {
+    var v = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+    if (!Array.isArray(v)) return [];
+    return v.map(function(x){
+      return Object.assign({}, x, {
+        img:         x.img || x.imageUrl || '',
+        imageUrl:    x.imageUrl || x.img || '',
+        platformKey: x.platformKey || x.pk || 'tv',
+        color:       x.color || x.color1 || '#1a2040',
+        score:       (typeof x.score === 'number') ? x.score : 0,
+        heat:        (typeof x.heat  === 'number') ? x.heat  : 0,
+        total:       (typeof x.total === 'number') ? x.total : 0,
+        t: x.title, e: x.emoji, p: x.platform
+      });
     });
-  }
-} catch (e) { /* localStorage 不可時は既存データのみ */ }
+  } catch (e) { return []; }
+})();
 
 const SCORES = { kami:5, yoin:3, fubin:1 };
 const DAY_FILTER = { mon:1, tue:2, wed:3, thu:4, fri:5, sat:6, sun:0 };
@@ -516,6 +425,19 @@ function renderGrid() {
     const dayNum = DAY_FILTER[currentFilter];
     return dayNum !== undefined && a.day === dayNum;
   });
+
+  if (!ANIMES.length) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:44px 20px;color:var(--muted2);font-size:13px;line-height:1.9;">
+        <div style="font-size:32px;margin-bottom:10px">📡</div>
+        作品が未選択です。<br>「今期から追加」でしょぼいカレンダーから作品を選ぶと<br>ここに表示され、感情ログ・ランキングに連動します。
+        <div style="margin-top:16px"><button onclick="location.href='animesync_discover.html'"
+          style="padding:10px 20px;border-radius:999px;border:1px solid rgba(77,184,212,0.4);
+          background:rgba(77,184,212,0.12);color:var(--accent);font-family:'Noto Sans JP',sans-serif;
+          font-size:12px;font-weight:700;cursor:pointer;">📡 今期から追加</button></div>
+      </div>`;
+    return;
+  }
 
   grid.innerHTML = filtered.map((a, i) => {
     const score = (weekData[a.id]?.total || 0);

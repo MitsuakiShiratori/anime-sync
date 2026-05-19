@@ -132,24 +132,25 @@ body{background:var(--bg);color:var(--text);font-family:"Noto Sans JP",sans-seri
 </nav>
 <div class="toast" id="toast"></div>
 <script>
-const ANIMES = [
-  {id:"tongari",title:"とんがり帽子のアトリエ",emoji:"🧙",platform:"Netflix",pk:"unext",img:"./tongariboushi.jpg"},
-  {id:"replica",title:"レプリカだって恋をする",emoji:"💘",platform:"ABEMA",pk:"abema",img:"./repurica.jpg"},
-  {id:"marriage",title:"マリッジトキシン",emoji:"💍",platform:"Netflix",pk:"unext",img:"./maridgetokishin.jpg"},
-  {id:"aisiteru",title:"愛してるゲームを終わらせたい",emoji:"🎮",platform:"ABEMA",pk:"abema",img:"./aishiterugame.jpg"},
-  {id:"hidari",title:"左ききのエレン",emoji:"🎨",platform:"Prime Video",pk:"prime",img:"./hidarikikinoeren.jpg"},
-  {id:"otaku",title:"クラスで2番目に可愛い女の子と友だちになった",emoji:"🎀",platform:"U-NEXT",pk:"unext",img:"./classde2banme.jpg"},
-  {id:"awashima",title:"淡島百景",emoji:"🌸",platform:"ABEMA",pk:"abema",img:"./awashimahyakkei.jpg"},
-  {id:"ichitatami",title:"一畳間まんきつ暮らし！",emoji:"🍜",platform:"ABEMA",pk:"abema",img:"./1jyohan.jpg"},
-  {id:"koori",title:"氷の城壁",emoji:"🧊",platform:"Netflix",pk:"unext",img:"./koorinojyoheki.jpg"},
-  {id:"kiriwo",title:"霧尾ファンクラブ",emoji:"🌫️",platform:"ABEMA",pk:"abema",img:"./kiriofunclub.jpg"},
-  {id:"kamiike",title:"上伊那ぼたん、酔える姿は百合の花",emoji:"🌺",platform:"ABEMA",pk:"abema",img:"./kamiinabotan.jpg"},
-  {id:"otaku2",title:"オタクに優しいギャルはいない",emoji:"💅",platform:"ABEMA",pk:"abema",img:"./otakuniyasashii.jpg"},
-  {id:"haruyuki",title:"春夏秋冬代行者",emoji:"🍂",platform:"Netflix",pk:"unext",img:"./syunkasyuutou.jpg"},
-  {id:"kaminiwa",title:"神の庭付き楠木邸",emoji:"🌳",platform:"ABEMA",pk:"abema",img:"./kaminoniwa.jpg"},
-  {id:"akane",title:"あかね噺",emoji:"🎭",platform:"Netflix",pk:"unext",img:"./akanebanashi.jpg"},
-  {id:"nihonsangoku",title:"日本三國",emoji:"⚔️",platform:"Prime Video",pk:"prime",img:"./nihonsankoku.jpg"}
-];
+const ANIMES = (function(){
+  // ── しょぼいカレンダー連携: 選択作品(as_my_season)のみを読み込む ──
+  try {
+    var v = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+    if (!Array.isArray(v)) return [];
+    return v.map(function(x){
+      return Object.assign({}, x, {
+        img:         x.img || x.imageUrl || '',
+        imageUrl:    x.imageUrl || x.img || '',
+        platformKey: x.platformKey || x.pk || 'tv',
+        color:       x.color || x.color1 || '#1a2040',
+        score:       (typeof x.score === 'number') ? x.score : 0,
+        heat:        (typeof x.heat  === 'number') ? x.heat  : 0,
+        total:       (typeof x.total === 'number') ? x.total : 0,
+        t: x.title, e: x.emoji, p: x.platform
+      });
+    });
+  } catch (e) { return []; }
+})();
 const SUBS = [
   {id:"abema",name:"ABEMA",emoji:"📺"},
   {id:"prime",name:"Prime Video",emoji:"📦"},

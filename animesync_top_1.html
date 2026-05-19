@@ -427,35 +427,39 @@ main { position:relative; z-index:1; }
 // ============================================================
 // データ
 // ============================================================
-const ANIMES = [
-  { id:'himetou',    title:'姫様拷問の時間です', emoji:'👑', day:1, time:'23:30', platform:'ABEMA',              pk:'abema', note:'最速', color1:'#1a0a20', color2:'#2d0e3a', heat:92 },
-  { id:'oshinoko',   title:'推しの子',           emoji:'⭐', day:3, time:'23:00', platform:'ABEMA',              pk:'abema', note:'',     color1:'#0a1020', color2:'#0e1a38', heat:88 },
-  { id:'toumei',     title:'透明男と人間女',     emoji:'👻', day:4, time:'24:00', platform:'ABEMA / U-NEXT',     pk:'abema', note:'深夜0時', color1:'#081818', color2:'#0c2828', heat:74 },
-  { id:'frieren',    title:'葬送のフリーレン',   emoji:'🌿', day:6, time:'24:00', platform:'日テレ系',           pk:'tv',    note:'深夜0時', color1:'#081408', color2:'#0e220e', heat:96 },
-  { id:'medalist',   title:'メダリスト',         emoji:'🥇', day:6, time:'26:00', platform:'テレビ東京系',       pk:'tv',    note:'深夜2時', color1:'#181208', color2:'#2a1e08', heat:85 },
-  { id:'yoinotsuki', title:'うるわしの宵の月',   emoji:'🌙', day:0, time:'17:00', platform:'テレビ',            pk:'tv',    note:'',       color1:'#08101a', color2:'#0c1a2e', heat:79 },
-  { id:'seihantai',  title:'正反対な君と僕',     emoji:'🫶', day:0, time:'17:30', platform:'ABEMA / Prime Video',pk:'prime', note:'先行配信あり', color1:'#180808', color2:'#2e0e0e', heat:83 },
-  { id:'ikokunitki', title:'違国日記',           emoji:'📖', day:0, time:'25:00', platform:'ABEMA / Prime Video',pk:'prime', note:'先行配信あり', color1:'#0a0a18', color2:'#14142a', heat:77 },
-];
+const ANIMES = (function(){
+  // ── しょぼいカレンダー連携: 選択作品(as_my_season)のみを読み込む ──
+  try {
+    var v = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+    if (!Array.isArray(v)) return [];
+    return v.map(function(x){
+      return Object.assign({}, x, {
+        img:         x.img || x.imageUrl || '',
+        imageUrl:    x.imageUrl || x.img || '',
+        platformKey: x.platformKey || x.pk || 'tv',
+        color:       x.color || x.color1 || '#1a2040',
+        score:       (typeof x.score === 'number') ? x.score : 0,
+        heat:        (typeof x.heat  === 'number') ? x.heat  : 0,
+        total:       (typeof x.total === 'number') ? x.total : 0,
+        t: x.title, e: x.emoji, p: x.platform
+      });
+    });
+  } catch (e) { return []; }
+})();
 
 const DAYS = ['日','月','火','水','木','金','土'];
 const EMOJIS = ['🌞','🌙','🔥','💧','🌲','✨','⚡'];
 const ORDER = [1,2,3,4,5,6,0];
 
 // モックランキング
-const RANKINGS = [
-  { rank:1, anime:ANIMES[3], cat:'作品', score:9.6 },
-  { rank:2, anime:ANIMES[0], cat:'作品', score:9.1 },
-  { rank:3, anime:ANIMES[1], cat:'作品', score:8.8 },
-  { rank:4, anime:ANIMES[4], cat:'作品', score:8.5 },
-];
+const RANKINGS = ANIMES.slice(0, 4).map((a, i) => (
+  { rank:i+1, anime:a, cat:'作品', score:(9.6 - i*0.35).toFixed(1) }
+));
 
 // モックコミュニティスレッド
-const THREADS = [
-  { anime:ANIMES[3], ep:8,  text:'第8話の演出がやばすぎる', count:342 },
-  { anime:ANIMES[0], ep:7,  text:'ヒロイン争い激化してる', count:218 },
-  { anime:ANIMES[1], ep:9,  text:'今週の衝撃展開について', count:187 },
-];
+const THREADS = ANIMES.slice(0, 3).map((a, i) => (
+  { anime:a, ep:i+2, text:`${a.title} が話題です`, count:[342,218,187][i] || 120 }
+));
 
 // ============================================================
 // 今日の放映

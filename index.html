@@ -427,48 +427,37 @@ main { position:relative; z-index:1; }
 // ============================================================
 // データ
 // ============================================================
-const ANIMES = [
-  // 月曜
-  { id:'tongari',    title:'とんがり帽子のアトリエ',         emoji:'🧙', day:1, time:'23:00', platform:'Netflix',      pk:'unext', note:'先行', img:'./tongariboushi.jpg', color1:'#0a1020', color2:'#142040', heat:88 },
-  // 火曜
-  { id:'replica',    title:'レプリカだって恋をする',          emoji:'💘', day:2, time:'24:00', platform:'ABEMA',        pk:'abema', note:'先行', img:'./repurica.jpg', color1:'#1a0810', color2:'#300e20', heat:82 },
-  { id:'aisiteru',   title:'愛してるゲームを終わらせたい',    emoji:'🎮', day:2, time:'23:30', platform:'ABEMA',        pk:'abema', note:'先行', img:'./aishiterugame.jpg', color1:'#180a0a', color2:'#2e1010', heat:85 },
-  { id:'hidari',     title:'左ききのエレン',                  emoji:'🎨', day:2, time:'24:30', platform:'Prime Video',  pk:'prime', note:'先行', img:'./hidarikikinoeren.jpg', color1:'#0a1218', color2:'#102030', heat:80 },
-  { id:'otaku',      title:'クラスで2番目に可愛い女の子と友だちになった', emoji:'🎀', day:2, time:'24:00', platform:'U-NEXT', pk:'unext', note:'', img:'./classde2banme.jpg', color1:'#1a0a18', color2:'#2e1030', heat:79 },
-  { id:'awashima',   title:'淡島百景',                        emoji:'🌸', day:2, time:'26:15', platform:'ABEMA',        pk:'abema', note:'',     img:'./awashimahyakkei.jpg', color1:'#180818', color2:'#2a102a', heat:72 },
-  { id:'ichitatami', title:'一畳間まんきつ暮らし！',           emoji:'🍜', day:2, time:'26:00', platform:'ABEMA',        pk:'abema', note:'',     img:'./1jyohan.jpg', color1:'#101808', color2:'#1a2a10', heat:68 },
-  // 木曜
-  { id:'koori',      title:'氷の城壁',                        emoji:'🧊', day:4, time:'24:30', platform:'Netflix',      pk:'unext', note:'先行', img:'./koorinojyoheki.jpg', color1:'#081820', color2:'#0c2a38', heat:83 },
-  { id:'kiriwo',     title:'霧尾ファンクラブ',                emoji:'🌫️', day:4, time:'25:00', platform:'ABEMA',       pk:'abema', note:'',     img:'./kiriofunclub.jpg', color1:'#101018', color2:'#1a1a2a', heat:75 },
-  // 金曜
-  { id:'kamiike',    title:'上伊那ぼたん、酔える姿は百合の花', emoji:'🌺', day:5, time:'24:00', platform:'ABEMA',       pk:'abema', note:'先行', img:'./kamiinabotan.jpg', color1:'#180a10', color2:'#2e1020', heat:77 },
-  // 土曜
-  { id:'otaku2',     title:'オタクに優しいギャルはいない',     emoji:'💅', day:6, time:'12:00', platform:'ABEMA',        pk:'abema', note:'',     img:'./otakuniyasashii.jpg', color1:'#1a0a18', color2:'#2e1030', heat:79 },
-  { id:'haruyuki',   title:'春夏秋冬代行者',                  emoji:'🍂', day:6, time:'24:00', platform:'Netflix',      pk:'unext', note:'',     img:'./syunkasyuutou.jpg', color1:'#181008', color2:'#2a1a08', heat:86 },
-  { id:'kaminiwa',   title:'神の庭付き楠木邸',                emoji:'🌳', day:6, time:'26:00', platform:'ABEMA',        pk:'abema', note:'先行', img:'./kaminoniwa.jpg', color1:'#081408', color2:'#0e2210', heat:74 },
-  // 日曜
-  { id:'akane',      title:'あかね噺',                        emoji:'🎭', day:0, time:'24:00', platform:'Netflix',      pk:'unext', note:'先行', img:'./akanebanashi.jpg', color1:'#1a0808', color2:'#2e1008', heat:90 },
-  { id:'nihonsangoku', title:'日本三國',                      emoji:'⚔️', day:0, time:'21:00', platform:'Prime Video',  pk:'prime', note:'先行', img:'./nihonsankoku.jpg', color1:'#100808', color2:'#201010', heat:87 },
-];
+const ANIMES = (function(){
+  // ── しょぼいカレンダー連携: 選択作品(as_my_season)のみを読み込む ──
+  try {
+    var v = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+    if (!Array.isArray(v)) return [];
+    return v.map(function(x){
+      return Object.assign({}, x, {
+        img:         x.img || x.imageUrl || '',
+        imageUrl:    x.imageUrl || x.img || '',
+        platformKey: x.platformKey || x.pk || 'tv',
+        color:       x.color || x.color1 || '#1a2040',
+        score:       (typeof x.score === 'number') ? x.score : 0,
+        heat:        (typeof x.heat  === 'number') ? x.heat  : 0,
+        total:       (typeof x.total === 'number') ? x.total : 0,
+        t: x.title, e: x.emoji, p: x.platform
+      });
+    });
+  } catch (e) { return []; }
+})();
 
 const DAYS = ['日','月','火','水','木','金','土'];
 const EMOJIS = ['🌞','🌙','🔥','💧','🌲','✨','⚡'];
 const ORDER = [1,2,3,4,5,6,0];
 
-// モックランキング
-const RANKINGS = [
-  { rank:1, anime:ANIMES[13], cat:'作品', score:9.4 },
-  { rank:2, anime:ANIMES[0],  cat:'作品', score:9.1 },
-  { rank:3, anime:ANIMES[11], cat:'作品', score:8.8 },
-  { rank:4, anime:ANIMES[4],  cat:'作品', score:8.5 },
-];
-
-// モックコミュニティスレッド
-const THREADS = [
-  { anime:ANIMES[13], ep:3, text:'第3話の落語シーンが神すぎる', count:312 },
-  { anime:ANIMES[0],  ep:2, text:'魔法の描写がやばい、作画神回', count:245 },
-  { anime:ANIMES[14], ep:4, text:'歴史考証がリアルすぎて震える', count:198 },
-];
+// 選択作品から動的生成（未選択なら空配列 → 各セクションは空表示）
+const RANKINGS = ANIMES.slice(0, 4).map((a, i) => (
+  { rank:i+1, anime:a, cat:'作品', score:(9.4 - i*0.3).toFixed(1) }
+));
+const THREADS = ANIMES.slice(0, 3).map((a, i) => (
+  { anime:a, ep:i+2, text:`${a.title} が話題です`, count:[312,245,198][i] || 120 }
+));
 
 // ============================================================
 // 今日の放映
@@ -479,12 +468,20 @@ function renderToday() {
   const container = document.getElementById('today-cards');
 
   if (!todayAnimes.length) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:24px;color:var(--muted2);font-size:13px;">
-        <div style="font-size:28px;margin-bottom:8px">🌙</div>
-        今日の放映はありません<br>
-        <span style="font-size:11px;color:var(--muted)">次は${getNextDay()}です</span>
-      </div>`;
+    container.innerHTML = !ANIMES.length
+      ? `<div style="text-align:center;padding:28px 20px;color:var(--muted2);font-size:13px;line-height:1.9;">
+           <div style="font-size:30px;margin-bottom:10px">📡</div>
+           作品が未選択です。<br>「今期から追加」でしょぼいカレンダーから選ぶと<br>ここに今日の放映が表示されます。
+           <div style="margin-top:14px"><button onclick="location.href='animesync_discover.html'"
+             style="padding:9px 18px;border-radius:999px;border:1px solid rgba(77,184,212,0.4);
+             background:rgba(77,184,212,0.12);color:var(--accent);font-family:'Noto Sans JP',sans-serif;
+             font-size:12px;font-weight:700;cursor:pointer;">📡 今期から追加</button></div>
+         </div>`
+      : `<div style="text-align:center;padding:24px;color:var(--muted2);font-size:13px;">
+           <div style="font-size:28px;margin-bottom:8px">🌙</div>
+           今日の放映はありません<br>
+           <span style="font-size:11px;color:var(--muted)">次は${getNextDay()}です</span>
+         </div>`;
     return;
   }
 

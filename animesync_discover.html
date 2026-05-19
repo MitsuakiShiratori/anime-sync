@@ -186,6 +186,28 @@ main { position:relative; z-index:1; padding:16px; }
 }
 .bn-item.active { color:var(--accent); }
 .bn-icon { font-size:20px; }
+
+/* ===== Annict連携バー ===== */
+.annict-bar {
+  margin-top:10px; border:1px solid var(--border); border-radius:10px;
+  background:var(--bg2); padding:10px 12px;
+}
+.annict-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.annict-status { font-size:11px; color:var(--muted2); }
+.annict-status.on { color:var(--accent3); }
+.annict-panel { margin-top:10px; border-top:1px solid var(--border); padding-top:10px; }
+.annict-help { font-size:11px; color:var(--muted2); line-height:1.7; margin-bottom:8px; }
+.annict-help a { color:var(--accent); }
+.annict-help b { color:var(--text); }
+.annict-input-row { display:flex; gap:6px; flex-wrap:wrap; }
+.annict-input-row input {
+  flex:1; min-width:170px; background:var(--bg3);
+  border:1px solid var(--border2); border-radius:8px; padding:8px 10px;
+  color:var(--text); font-size:12px; font-family:'Noto Sans JP',sans-serif;
+}
+
+/* Annictカバー画像 */
+.card-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
 </style>
 </head>
 <body>
@@ -207,6 +229,28 @@ main { position:relative; z-index:1; padding:16px; }
       作品ページで見る（<span id="picked-count">0</span>）
     </button>
     <button class="disc-btn" onclick="reload()">↻ 再取得</button>
+  </div>
+
+  <!-- Annict画像連携 -->
+  <div class="annict-bar">
+    <div class="annict-row">
+      <span class="annict-status" id="annict-status">🖼️ Annict画像: 未連携</span>
+      <button class="disc-btn" style="padding:6px 12px;font-size:11px;" onclick="toggleAnnictPanel()">設定</button>
+    </div>
+    <div class="annict-panel" id="annict-panel" style="display:none;">
+      <p class="annict-help">
+        Annictの<b>個人用アクセストークン</b>でカバー画像を取得します。
+        <a href="https://annict.com/settings/apps" target="_blank" rel="noopener">トークンを作成 ↗</a><br>
+        スコープは<b>読み込み専用</b>を推奨。トークンは<b>この端末のみ</b>(localStorage)に保存され、
+        リポジトリやサーバには送られません（画像取得時に api.annict.com へのみ送信）。
+      </p>
+      <div class="annict-input-row">
+        <input id="annict-input" type="password" placeholder="アクセストークンを貼り付け"
+               autocomplete="off" spellcheck="false">
+        <button class="disc-btn primary" onclick="saveAnnictToken()">保存</button>
+        <button class="disc-btn" onclick="clearAnnictToken()">解除</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -250,17 +294,21 @@ main { position:relative; z-index:1; padding:16px; }
 //   ① TitleMedium 全件 → 今クール×Cat=1(TVアニメ) で一覧化（12hキャッシュ）
 //   ② ProgramByDate,TitleMedium（今日分・約75KB）で
 //      放送曜日/時刻/配信を判明した分だけ補完（来訪を重ねるほど埋まる）
-//  CORSヘッダが無いため通信は全て JSONP（scriptタグ）で行う。
+//   ③ Annict GraphQL（任意・要トークン）でカバー画像を補完
+//  しょぼいはCORS不可のため JSONP、AnnictはCORS可のため fetch を使用。
 // ============================================================
 const MY_KEY = 'as_my_season';                  // 選択済み（works/ranking/calendar が参照）
 const SYOBO  = 'https://cal.syoboi.jp/json.php';
 const DAY_JP = ['日','月','火','水','木','金','土'];
 const DAY_FILT = { mon:1, tue:2, wed:3, thu:4, fri:5, sat:6, sun:0 };
-const CACHE_TTL = 12 * 3600 * 1000;             // 一覧キャッシュ 12時間
+const CACHE_TTL = 12 * 3600 * 1000;             // 一覧/画像キャッシュ 12時間
+const ANNICT     = 'https://api.annict.com/graphql';  // CORS対応(allow-origin:*)
+const ANNICT_KEY = 'as_annict_token';                 // トークンは端末のみ保存
 
 let WORKS  = [];
 let filter = 'all';
 let Q      = null;
+let annictCachedTs = 0;                          // 画像取得の最終成功時刻
 
 function loadMy(){ try{ const v=JSON.parse(localStorage.getItem(MY_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
 function saveMy(a){ localStorage.setItem(MY_KEY, JSON.stringify(a)); }
@@ -391,10 +439,12 @@ function render(){
   grid.innerHTML = list.map((a,i)=>{
     const on = isPicked(a.id);
     const hasSlot = a.day !== null;
+    const hasImg = !!(a.imageUrl && String(a.imageUrl).length);
     return `
     <div class="work-card ${on?'picked':''}" style="animation-delay:${Math.min(i,12)*0.03}s">
       <div class="card-thumb">
-        <div class="card-thumb-dummy" style="background:linear-gradient(135deg,${a.color1},${a.color2})">
+        ${hasImg ? `<img class="card-thumb-img" src="${escapeHtml(a.imageUrl)}" alt="${escapeHtml(a.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
+        <div class="card-thumb-dummy" style="${hasImg?'display:none;':''}background:linear-gradient(135deg,${a.color1},${a.color2})">
           <span class="dummy-emoji">${a.emoji}</span>
           <span class="dummy-label">SYOBOCAL</span>
         </div>
@@ -469,7 +519,132 @@ function readCache(){
   return null;
 }
 function writeCache(){
-  try{ localStorage.setItem(Q.key, JSON.stringify({ ts:Date.now(), works:WORKS })); }catch(e){}
+  try{ localStorage.setItem(Q.key, JSON.stringify({ ts:Date.now(), works:WORKS, annictTs:annictCachedTs })); }catch(e){}
+}
+
+// ============================================================
+// Annict 連携（カバー画像）
+//  - 個人用アクセストークンは localStorage のみに保存（未コミット）
+//  - searchWorks(seasons:[YYYY-season]) をページング取得し、
+//    正規化タイトルで しょぼいカレンダー作品と突合して画像URLを付与
+//  - Annictは権利の都合で画像が無い作品も多い → 取れた分だけ反映、
+//    残りは従来どおり絵文字プレースホルダ
+// ============================================================
+function getToken(){ try{ return localStorage.getItem(ANNICT_KEY)||''; }catch(e){ return ''; } }
+
+function setAnnictStatus(txt,on){
+  const el=document.getElementById('annict-status');
+  if(el){ el.textContent=txt; el.classList.toggle('on',!!on); }
+}
+function updateAnnictUI(){
+  if(getToken()) setAnnictStatus('🖼️ Annict画像: 連携済み', true);
+  else           setAnnictStatus('🖼️ Annict画像: 未連携', false);
+}
+function toggleAnnictPanel(){
+  const p=document.getElementById('annict-panel');
+  if(p) p.style.display = (p.style.display==='none') ? 'block' : 'none';
+}
+function saveAnnictToken(){
+  const inp=document.getElementById('annict-input');
+  const v=((inp&&inp.value)||'').trim();
+  if(!v){ showToast('トークンを入力してください'); return; }
+  try{ localStorage.setItem(ANNICT_KEY, v); }catch(e){}
+  if(inp) inp.value='';                       // 画面に残さない
+  annictCachedTs=0;
+  updateAnnictUI();
+  showToast('🖼️ Annict連携を保存しました');
+  annictEnrich(true);
+}
+function clearAnnictToken(){
+  try{ localStorage.removeItem(ANNICT_KEY); }catch(e){}
+  updateAnnictUI();
+  showToast('Annict連携を解除しました');
+}
+
+// しょぼいの表記ゆれを吸収する正規化
+function norm(s){
+  let x=(s||'').normalize('NFKC').toLowerCase();
+  x=x.replace(/(season|シーズン)\s*[0-9]+/g,'')
+     .replace(/[0-9]+(st|nd|rd|th)\s*season/g,'')
+     .replace(/第?[0-9]+期/g,'')
+     .replace(/\b(2nd|3rd|4th|5th)\b/g,'')
+     .replace(/the animation/g,'');
+  return x.replace(/[\s　、。・,.!！?？:：;；~〜ーｰ\-–—「」『』（）()\[\]【】’'"“”…＆&]/g,'');
+}
+
+function annictSlug(){
+  const name = { 1:'winter', 4:'spring', 7:'summer', 10:'autumn' }[Q.qStart];
+  return `${Q.year}-${name}`;
+}
+
+async function fetchAnnictSeason(tok){
+  const q='query($s:[String!],$a:String){searchWorks(seasons:$s,first:50,after:$a,'
+        +'orderBy:{field:WATCHERS_COUNT,direction:DESC}){pageInfo{hasNextPage endCursor}'
+        +'nodes{title titleKana image{recommendedImageUrl facebookOgImageUrl}}}}';
+  const map={}; let after=null, pages=0;
+  while(pages<5){
+    const res=await fetch(ANNICT,{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+tok },
+      body:JSON.stringify({ query:q, variables:{ s:[annictSlug()], a:after } }),
+    });
+    if(res.status===401) throw new Error('unauthorized');
+    if(!res.ok)          throw new Error('http'+res.status);
+    const j=await res.json();
+    if(j.errors&&j.errors.length) throw new Error('graphql');
+    const sw=j.data&&j.data.searchWorks;
+    if(!sw) break;
+    (sw.nodes||[]).forEach(n=>{
+      const url=(n.image&&(n.image.recommendedImageUrl||n.image.facebookOgImageUrl))||'';
+      if(!url) return;
+      [n.title,n.titleKana].forEach(t=>{ const k=norm(t); if(k&&!map[k]) map[k]=url; });
+    });
+    pages++;
+    if(sw.pageInfo&&sw.pageInfo.hasNextPage) after=sw.pageInfo.endCursor; else break;
+  }
+  return map;
+}
+
+function applyImages(map){
+  let n=0;
+  WORKS.forEach(w=>{
+    if(w.imageUrl) return;
+    const cands=[w.title,w.shortTitle].map(norm).filter(Boolean);
+    let url='';
+    for(const k of cands){ if(map[k]){ url=map[k]; break; } }
+    if(!url){                                   // 期数違い等の部分一致フォールバック
+      outer:
+      for(const k of cands){
+        for(const mk in map){
+          if(mk.length>=6 && (mk.includes(k)||k.includes(mk))){ url=map[mk]; break outer; }
+        }
+      }
+    }
+    if(url){ w.imageUrl=url; n++; }
+  });
+  return n;
+}
+
+async function annictEnrich(force){
+  updateAnnictUI();
+  const tok=getToken();
+  if(!tok) return;
+  // 直近に取得済みなら再叩きしない（手動再取得・保存時は force）
+  if(!force && annictCachedTs && (Date.now()-annictCachedTs)<CACHE_TTL
+     && WORKS.some(w=>w.imageUrl)) return;
+  try{
+    setAnnictStatus('🖼️ Annictから画像取得中…');
+    const map=await fetchAnnictSeason(tok);
+    applyImages(map);
+    annictCachedTs=Date.now();
+    render(); writeCache();
+    const c=WORKS.filter(w=>w.imageUrl).length;
+    setAnnictStatus(`🖼️ Annict画像: ${c}/${WORKS.length}件`, c>0);
+  }catch(e){
+    setAnnictStatus(
+      e.message==='unauthorized' ? '⚠️ トークンが無効です（再作成してください）'
+                                 : '⚠️ Annict画像の取得に失敗しました', false);
+  }
 }
 
 // ---- 取得フロー ----
@@ -482,6 +657,7 @@ async function load(force){
   const cached = force ? null : readCache();
   if (cached){
     WORKS = cached.works;
+    annictCachedTs = cached.annictTs || 0;
     sortWorks(); render();
   } else {
     setState('<div class="state-box"><div class="spinner"></div>'
@@ -489,6 +665,7 @@ async function load(force){
     try{
       const d = await jsonp(`${SYOBO}?Req=TitleMedium`, 30000);
       WORKS = buildSeason((d && d.Titles) || {});
+      annictCachedTs = 0;                       // 新規一覧 → Annict再取得対象
       if (!WORKS.length){
         setState('<div class="state-box"><span class="state-emoji">🌱</span>'
           +`${escapeHtml(Q.label)}の新作TVアニメがまだ登録されていないようです。<br>時期をおいて再取得してください。</div>`);
@@ -511,11 +688,15 @@ async function load(force){
       sortWorks(); render(); writeCache();
     }
   }catch(e){ /* 補完は任意。一覧は表示済み */ }
+
+  // 3) Annictでカバー画像を補完（トークンがあれば。失敗は無視）
+  annictEnrich(force);
 }
 
 function reload(){ WORKS=[]; render(); load(true); }
 
 // 初期化
+updateAnnictUI();
 load(false);
 </script>
 </body>

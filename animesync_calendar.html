@@ -315,35 +315,25 @@ body::before {
 // ============================================================
 // アニメデータ（dayOfWeek: 0=日〜6=土）
 // ============================================================
-const ANIMES = [
-  { id:'tongari',      title:'とんがり帽子のアトリエ',            emoji:'🧙', dayOfWeek:1, time:'23:00', platform:'Netflix',      pk:'unext', note:'先行' },
-  { id:'replica',      title:'レプリカだって恋をする',             emoji:'💘', dayOfWeek:2, time:'24:00', platform:'ABEMA',        pk:'abema', note:'先行' },
-  { id:'marriage',     title:'マリッジトキシン',                   emoji:'💍', dayOfWeek:2, time:'23:00', platform:'Netflix',      pk:'unext', note:'' },
-  { id:'aisiteru',     title:'愛してるゲームを終わらせたい',       emoji:'🎮', dayOfWeek:2, time:'23:30', platform:'ABEMA',        pk:'abema', note:'先行' },
-  { id:'hidari',       title:'左ききのエレン',                     emoji:'🎨', dayOfWeek:2, time:'24:30', platform:'Prime Video',  pk:'prime', note:'先行' },
-  { id:'otaku',        title:'クラスで2番目に可愛い女の子と友だちになった', emoji:'🎀', dayOfWeek:2, time:'24:00', platform:'U-NEXT', pk:'unext', note:'' },
-  { id:'awashima',     title:'淡島百景',                           emoji:'🌸', dayOfWeek:2, time:'26:15', platform:'ABEMA',        pk:'abema', note:'' },
-  { id:'ichitatami',   title:'一畳間まんきつ暮らし！',              emoji:'🍜', dayOfWeek:2, time:'26:00', platform:'ABEMA',        pk:'abema', note:'' },
-  { id:'koori',        title:'氷の城壁',                           emoji:'🧊', dayOfWeek:4, time:'24:30', platform:'Netflix',      pk:'unext', note:'先行' },
-  { id:'kiriwo',       title:'霧尾ファンクラブ',                   emoji:'🌫️', dayOfWeek:4, time:'25:00', platform:'ABEMA',       pk:'abema', note:'' },
-  { id:'kamiike',      title:'上伊那ぼたん、酔える姿は百合の花',   emoji:'🌺', dayOfWeek:5, time:'24:00', platform:'ABEMA',        pk:'abema', note:'先行' },
-  { id:'otaku2',       title:'オタクに優しいギャルはいない',        emoji:'💅', dayOfWeek:6, time:'12:00', platform:'ABEMA',        pk:'abema', note:'' },
-  { id:'haruyuki',     title:'春夏秋冬代行者',                     emoji:'🍂', dayOfWeek:6, time:'24:00', platform:'Netflix',      pk:'unext', note:'' },
-  { id:'kaminiwa',     title:'神の庭付き楠木邸',                   emoji:'🌳', dayOfWeek:6, time:'26:00', platform:'ABEMA',        pk:'abema', note:'先行' },
-  { id:'akane',        title:'あかね噺',                           emoji:'🎭', dayOfWeek:0, time:'24:00', platform:'Netflix',      pk:'unext', note:'先行' },
-  { id:'nihonsangoku', title:'日本三國',                           emoji:'⚔️', dayOfWeek:0, time:'21:00', platform:'Prime Video',  pk:'prime', note:'先行' },
-];
-
-// ── しょぼいカレンダー連携: 「今期から追加」で選んだ作品を取り込む ──
-try {
-  const __my = JSON.parse(localStorage.getItem('as_my_season') || '[]');
-  if (Array.isArray(__my)) {
-    const __have = new Set(ANIMES.map(a => a.id));
-    __my.forEach(a => {
-      if (a && a.id && !__have.has(a.id)) { ANIMES.push(a); __have.add(a.id); }
+const ANIMES = (function(){
+  // ── しょぼいカレンダー連携: 選択作品(as_my_season)のみを読み込む ──
+  try {
+    var v = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+    if (!Array.isArray(v)) return [];
+    return v.map(function(x){
+      return Object.assign({}, x, {
+        img:         x.img || x.imageUrl || '',
+        imageUrl:    x.imageUrl || x.img || '',
+        platformKey: x.platformKey || x.pk || 'tv',
+        color:       x.color || x.color1 || '#1a2040',
+        score:       (typeof x.score === 'number') ? x.score : 0,
+        heat:        (typeof x.heat  === 'number') ? x.heat  : 0,
+        total:       (typeof x.total === 'number') ? x.total : 0,
+        t: x.title, e: x.emoji, p: x.platform
+      });
     });
-  }
-} catch (e) { /* localStorage 不可時は既存データのみ */ }
+  } catch (e) { return []; }
+})();
 
 const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 const DAYS_JP = ['日','月','火','水','木','金','土'];
@@ -355,6 +345,19 @@ let currentMonth = new Date().getMonth();
 // カレンダー描画
 // ============================================================
 function renderCalendar() {
+  if (!ANIMES.length) {
+    const g = document.getElementById('cal-grid');
+    if (g) g.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--muted2);font-size:13px;line-height:1.9;">
+      <div style="font-size:30px;margin-bottom:10px">📡</div>
+      作品が未選択です。<br>「今期から追加」でしょぼいカレンダーから作品を選ぶと<br>放送日がここに表示されます。
+      <div style="margin-top:14px"><button onclick="location.href='animesync_discover.html'"
+        style="padding:9px 18px;border-radius:999px;border:1px solid rgba(77,184,212,0.4);
+        background:rgba(77,184,212,0.12);color:var(--accent);font-family:'Noto Sans JP',sans-serif;
+        font-size:12px;font-weight:700;cursor:pointer;">📡 今期から追加</button></div></div>`;
+    const mt = document.getElementById('month-title');
+    if (mt) mt.innerHTML = `<span>${currentYear}</span> ${MONTHS[currentMonth]}`;
+    return;
+  }
   const today = new Date();
   const firstDay = new Date(currentYear, currentMonth, 1);
   const lastDay  = new Date(currentYear, currentMonth + 1, 0);

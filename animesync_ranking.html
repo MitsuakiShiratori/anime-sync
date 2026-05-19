@@ -401,35 +401,25 @@ main { position:relative; z-index:1; padding:20px 16px; }
 // ============================================================
 // アニメデータ
 // ============================================================
-const ANIMES = [
-  { id:'tongari',      title:'とんがり帽子のアトリエ',                    emoji:'🧙' },
-  { id:'replica',      title:'レプリカだって恋をする',                    emoji:'💘' },
-  { id:'marriage',     title:'マリッジトキシン',                          emoji:'💍' },
-  { id:'aisiteru',     title:'愛してるゲームを終わらせたい',              emoji:'🎮' },
-  { id:'hidari',       title:'左ききのエレン',                            emoji:'🎨' },
-  { id:'otaku',        title:'クラスで2番目に可愛い女の子と友だちになった', emoji:'🎀' },
-  { id:'awashima',     title:'淡島百景',                                  emoji:'🌸' },
-  { id:'ichitatami',   title:'一畳間まんきつ暮らし！',                     emoji:'🍜' },
-  { id:'koori',        title:'氷の城壁',                                  emoji:'🧊' },
-  { id:'kiriwo',       title:'霧尾ファンクラブ',                          emoji:'🌫️' },
-  { id:'kamiike',      title:'上伊那ぼたん、酔える姿は百合の花',          emoji:'🌺' },
-  { id:'otaku2',       title:'オタクに優しいギャルはいない',              emoji:'💅' },
-  { id:'haruyuki',     title:'春夏秋冬代行者',                            emoji:'🍂' },
-  { id:'kaminiwa',     title:'神の庭付き楠木邸',                          emoji:'🌳' },
-  { id:'akane',        title:'あかね噺',                                  emoji:'🎭' },
-  { id:'nihonsangoku', title:'日本三國',                                  emoji:'⚔️' },
-];
-
-// ── しょぼいカレンダー連携: 「今期から追加」で選んだ作品を取り込む ──
-try {
-  const __my = JSON.parse(localStorage.getItem('as_my_season') || '[]');
-  if (Array.isArray(__my)) {
-    const __have = new Set(ANIMES.map(a => a.id));
-    __my.forEach(a => {
-      if (a && a.id && !__have.has(a.id)) { ANIMES.push(a); __have.add(a.id); }
+const ANIMES = (function(){
+  // ── しょぼいカレンダー連携: 選択作品(as_my_season)のみを読み込む ──
+  try {
+    var v = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+    if (!Array.isArray(v)) return [];
+    return v.map(function(x){
+      return Object.assign({}, x, {
+        img:         x.img || x.imageUrl || '',
+        imageUrl:    x.imageUrl || x.img || '',
+        platformKey: x.platformKey || x.pk || 'tv',
+        color:       x.color || x.color1 || '#1a2040',
+        score:       (typeof x.score === 'number') ? x.score : 0,
+        heat:        (typeof x.heat  === 'number') ? x.heat  : 0,
+        total:       (typeof x.total === 'number') ? x.total : 0,
+        t: x.title, e: x.emoji, p: x.platform
+      });
     });
-  }
-} catch (e) { /* localStorage 不可時は既存データのみ */ }
+  } catch (e) { return []; }
+})();
 
 const SCORES = { kami:5, yoin:3, fubin:1 };
 const EMOTION_LABEL = { kami:'✨ 神', yoin:'🌊 余韻', fubin:'💔 不憫' };
@@ -537,6 +527,10 @@ function renderRanking() {
       <div class="empty-state">
         <div class="icon">📭</div>
         <p>まだ感情ログがありません。<br>作品を選んで「神・余韻・不憫」を記録しよう。</p>
+        <div style="margin-top:14px"><button onclick="location.href='animesync_discover.html'"
+          style="padding:9px 18px;border-radius:999px;border:1px solid rgba(77,184,212,0.4);
+          background:rgba(77,184,212,0.12);color:var(--accent);font-family:'Noto Sans JP',sans-serif;
+          font-size:12px;font-weight:700;cursor:pointer;">📡 今期から追加</button></div>
       </div>`;
     return;
   }
