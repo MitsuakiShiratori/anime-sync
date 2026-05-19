@@ -303,7 +303,13 @@ main { position:relative; z-index:1; padding:16px; }
 <!-- TOP NAV -->
 <nav class="topnav">
   <div class="nav-logo" onclick="location.href='index.html'">AnimeSync</div>
-  <div style="font-size:11px;color:var(--muted2);letter-spacing:2px">2026 春</div>
+  <button onclick="location.href='animesync_discover.html'"
+    style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;
+           border:1px solid rgba(77,184,212,0.4);background:rgba(77,184,212,0.12);
+           color:var(--accent);font-family:'Noto Sans JP',sans-serif;font-size:11px;
+           font-weight:700;letter-spacing:1px;cursor:pointer;">
+    📡 今期から追加
+  </button>
 </nav>
 
 <!-- フィルターバー -->
@@ -465,6 +471,18 @@ const ANIMES = [
     color1:'#201010', color2:'#301818',
   },
 ];
+
+// ── しょぼいカレンダー連携: 「今期から追加」(animesync_discover.html) で
+//    選んだ作品を、重複しないように ANIMES へ取り込む ──
+try {
+  const __my = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+  if (Array.isArray(__my)) {
+    const __have = new Set(ANIMES.map(a => a.id));
+    __my.forEach(a => {
+      if (a && a.id && !__have.has(a.id)) { ANIMES.push(a); __have.add(a.id); }
+    });
+  }
+} catch (e) { /* localStorage 不可時は既存データのみ */ }
 
 const SCORES = { kami:5, yoin:3, fubin:1 };
 const DAY_FILTER = { mon:1, tue:2, wed:3, thu:4, fri:5, sat:6, sun:0 };

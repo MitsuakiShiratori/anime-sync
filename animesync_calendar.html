@@ -303,8 +303,8 @@ body::before {
   <div class="bn-item" onclick="location.href='animesync_ranking.html'">
     <span class="bn-icon">🏆</span><span>ランキング</span>
   </div>
-  <div class="bn-item">
-    <span class="bn-icon">💬</span><span>コミュニティ</span>
+  <div class="bn-item" onclick="location.href='animesync_discover.html'">
+    <span class="bn-icon">🎬</span><span>作品</span>
   </div>
   <div class="bn-item" onclick="location.href='animesync_mypage.html'">
     <span class="bn-icon">👤</span><span>マイページ</span>
@@ -333,6 +333,17 @@ const ANIMES = [
   { id:'akane',        title:'あかね噺',                           emoji:'🎭', dayOfWeek:0, time:'24:00', platform:'Netflix',      pk:'unext', note:'先行' },
   { id:'nihonsangoku', title:'日本三國',                           emoji:'⚔️', dayOfWeek:0, time:'21:00', platform:'Prime Video',  pk:'prime', note:'先行' },
 ];
+
+// ── しょぼいカレンダー連携: 「今期から追加」で選んだ作品を取り込む ──
+try {
+  const __my = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+  if (Array.isArray(__my)) {
+    const __have = new Set(ANIMES.map(a => a.id));
+    __my.forEach(a => {
+      if (a && a.id && !__have.has(a.id)) { ANIMES.push(a); __have.add(a.id); }
+    });
+  }
+} catch (e) { /* localStorage 不可時は既存データのみ */ }
 
 const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 const DAYS_JP = ['日','月','火','水','木','金','土'];

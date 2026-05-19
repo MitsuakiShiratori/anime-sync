@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AnimeSync — 今期から追加</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #060810;
+  --bg2:     #0a0e18;
+  --bg3:     #0f1520;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --accent:  #4db8d4;
+  --accent2: #e8608a;
+  --accent3: #6ec47a;
+  --gold:    #f0c040;
+  --purple:  #9b7fe8;
+  --text:    #e0e8f4;
+  --muted:   #445566;
+  --muted2:  #7a8fa8;
+  --nav-h:   60px;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  min-height: 100vh;
+  padding-bottom: calc(var(--nav-h) + 24px);
+}
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.022'/%3E%3C/svg%3E");
+}
+
+/* ===== TOP NAV ===== */
+.topnav {
+  position:sticky; top:0; z-index:100;
+  height:52px;
+  background:rgba(6,8,16,0.92);
+  backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px;
+}
+.nav-logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px; letter-spacing:4px;
+  color:var(--accent);
+  text-shadow:0 0 20px rgba(77,184,212,0.45);
+  cursor:pointer;
+}
+.nav-season { font-size:11px; color:var(--muted2); letter-spacing:2px; }
+
+/* ===== ヘッダー帯 ===== */
+.disc-head { padding:16px 16px 8px; position:relative; z-index:1; }
+.disc-title { font-size:15px; font-weight:700; }
+.disc-sub { font-size:11px; color:var(--muted2); margin-top:4px; line-height:1.6; }
+.disc-sub b { color:var(--accent); }
+.disc-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.disc-btn {
+  padding:8px 14px; border-radius:10px; cursor:pointer;
+  border:1px solid var(--border2); background:rgba(255,255,255,0.03);
+  font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:700;
+  color:var(--text); transition:all 0.15s;
+}
+.disc-btn:active { transform:scale(0.96); }
+.disc-btn.primary {
+  background:rgba(77,184,212,0.14); border-color:rgba(77,184,212,0.4); color:var(--accent);
+}
+
+/* ===== フィルター ===== */
+.filter-bar {
+  display:flex; gap:6px; padding:12px 16px;
+  overflow-x:auto; scrollbar-width:none;
+  border-bottom:1px solid var(--border);
+  background:var(--bg2);
+  position:sticky; top:52px; z-index:90;
+}
+.filter-bar::-webkit-scrollbar { display:none; }
+.filter-btn {
+  flex-shrink:0; padding:6px 14px; border-radius:20px;
+  border:1px solid var(--border); background:none;
+  font-family:'Noto Sans JP',sans-serif; font-size:11px; font-weight:700;
+  color:var(--muted2); cursor:pointer; transition:all 0.15s; white-space:nowrap;
+}
+.filter-btn.active {
+  background:rgba(77,184,212,0.12); border-color:rgba(77,184,212,0.4); color:var(--accent);
+}
+
+/* ===== グリッド ===== */
+main { position:relative; z-index:1; padding:16px; }
+.works-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+
+/* ===== 状態表示 ===== */
+.state-box { text-align:center; padding:48px 24px; color:var(--muted2); font-size:13px; line-height:1.9; }
+.state-emoji { font-size:40px; display:block; margin-bottom:12px; }
+.spinner {
+  width:34px; height:34px; margin:0 auto 16px;
+  border:3px solid var(--border2); border-top-color:var(--accent);
+  border-radius:50%; animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ===== カード ===== */
+.work-card {
+  border-radius:14px; overflow:hidden;
+  background:var(--bg2); border:1px solid var(--border);
+  position:relative; transition:transform 0.2s, border-color 0.2s;
+  animation:cardIn 0.4s ease both;
+}
+.work-card.picked { border-color:rgba(110,196,122,0.5); }
+@keyframes cardIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.card-thumb { width:100%; aspect-ratio:3/4; position:relative; overflow:hidden; }
+.card-thumb-dummy {
+  width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:8px;
+}
+.dummy-emoji { font-size:36px; }
+.dummy-label { font-size:9px; color:var(--muted2); letter-spacing:1px; }
+.card-overlay {
+  position:absolute; inset:0;
+  background:linear-gradient(to bottom,transparent 40%,rgba(6,8,16,0.7) 70%,rgba(6,8,16,0.95) 100%);
+}
+.card-platform {
+  position:absolute; top:8px; left:8px;
+  font-size:9px; font-weight:700; padding:2px 7px;
+  border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(8px);
+  max-width:72%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.card-platform.abema { background:rgba(232,96,138,0.85); color:#fff; }
+.card-platform.prime { background:rgba(0,168,107,0.85);  color:#fff; }
+.card-platform.unext { background:rgba(20,20,20,0.85);   color:var(--gold); border:1px solid rgba(240,192,64,0.4); }
+.card-platform.tv    { background:rgba(30,40,60,0.85);   color:var(--muted2); }
+.card-day {
+  position:absolute; top:8px; right:8px;
+  font-size:10px; font-weight:700; padding:2px 8px;
+  border-radius:4px;
+  background:rgba(6,8,16,0.75); color:var(--muted2);
+  backdrop-filter:blur(8px); border:1px solid var(--border2);
+}
+.card-info-overlay { position:absolute; bottom:0; left:0; right:0; padding:8px 10px; }
+.card-time { font-size:10px; color:rgba(255,255,255,0.6); margin-bottom:3px; }
+.card-title-overlay {
+  font-size:12px; font-weight:700; line-height:1.3; color:#fff;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.card-body { padding:10px; }
+.pick-btn {
+  width:100%; padding:9px; border-radius:9px; cursor:pointer;
+  border:1px solid var(--border2); background:rgba(255,255,255,0.03);
+  font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:700;
+  color:var(--text); transition:all 0.12s;
+}
+.pick-btn:active { transform:scale(0.96); }
+.pick-btn.on { background:rgba(110,196,122,0.16); border-color:rgba(110,196,122,0.45); color:var(--accent3); }
+
+/* ===== トースト ===== */
+.toast {
+  position:fixed; bottom:calc(var(--nav-h)+16px); left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--bg3); border:1px solid var(--border2);
+  border-radius:24px; padding:10px 20px;
+  font-size:13px; z-index:300; opacity:0;
+  transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ===== BOTTOM NAV ===== */
+.bottomnav {
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  height:var(--nav-h);
+  background:rgba(6,8,16,0.96);
+  backdrop-filter:blur(24px);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center;
+}
+.bn-item {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  gap:3px; cursor:pointer; padding:8px 0;
+  font-size:10px; color:var(--muted2); transition:color 0.15s;
+}
+.bn-item.active { color:var(--accent); }
+.bn-icon { font-size:20px; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="nav-logo" onclick="location.href='index.html'">AnimeSync</div>
+  <div class="nav-season" id="nav-season">— —</div>
+</nav>
+
+<!-- ヘッダー -->
+<div class="disc-head">
+  <div class="disc-title">📡 今期から作品を追加</div>
+  <div class="disc-sub" id="disc-sub">
+    しょぼいカレンダーから<b id="season-label">今期</b>の新作TVアニメを取得します。
+  </div>
+  <div class="disc-actions">
+    <button class="disc-btn primary" onclick="location.href='animesync_works.html'">
+      作品ページで見る（<span id="picked-count">0</span>）
+    </button>
+    <button class="disc-btn" onclick="reload()">↻ 再取得</button>
+  </div>
+</div>
+
+<!-- フィルターバー -->
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">すべて</button>
+  <button class="filter-btn" data-f="picked" onclick="setFilter('picked',this)">追加済み</button>
+  <button class="filter-btn" data-f="mon" onclick="setFilter('mon',this)">月</button>
+  <button class="filter-btn" data-f="tue" onclick="setFilter('tue',this)">火</button>
+  <button class="filter-btn" data-f="wed" onclick="setFilter('wed',this)">水</button>
+  <button class="filter-btn" data-f="thu" onclick="setFilter('thu',this)">木</button>
+  <button class="filter-btn" data-f="fri" onclick="setFilter('fri',this)">金</button>
+  <button class="filter-btn" data-f="sat" onclick="setFilter('sat',this)">土</button>
+  <button class="filter-btn" data-f="sun" onclick="setFilter('sun',this)">日</button>
+</div>
+
+<main>
+  <div id="state"></div>
+  <div class="works-grid" id="works-grid"></div>
+</main>
+
+<!-- BOTTOM NAV -->
+<nav class="bottomnav">
+  <div class="bn-item" onclick="location.href='index.html'"><span class="bn-icon">🏠</span><span>ホーム</span></div>
+  <div class="bn-item" onclick="location.href='animesync_calendar.html'"><span class="bn-icon">📅</span><span>スケジュール</span></div>
+  <div class="bn-item" onclick="location.href='animesync_ranking.html'"><span class="bn-icon">🏆</span><span>ランキング</span></div>
+  <div class="bn-item active" onclick="location.href='animesync_works.html'"><span class="bn-icon">🎬</span><span>作品</span></div>
+  <div class="bn-item" onclick="location.href='animesync_mypage.html'"><span class="bn-icon">👤</span><span>マイページ</span></div>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// AnimeSync — 今期から追加（しょぼいカレンダー連携）
+//
+//  しょぼいカレンダー json.php の挙動（実測）:
+//   - ProgramByDate は Start/Days を無視し常に「今日」分のみ返す
+//   - TitleMedium(TID未指定) は全タイトルを返す（gzip約740KB）
+//  そこで:
+//   ① TitleMedium 全件 → 今クール×Cat=1(TVアニメ) で一覧化（12hキャッシュ）
+//   ② ProgramByDate,TitleMedium（今日分・約75KB）で
+//      放送曜日/時刻/配信を判明した分だけ補完（来訪を重ねるほど埋まる）
+//  CORSヘッダが無いため通信は全て JSONP（scriptタグ）で行う。
+// ============================================================
+const MY_KEY = 'as_my_season';                  // 選択済み（works/ranking/calendar が参照）
+const SYOBO  = 'https://cal.syoboi.jp/json.php';
+const DAY_JP = ['日','月','火','水','木','金','土'];
+const DAY_FILT = { mon:1, tue:2, wed:3, thu:4, fri:5, sat:6, sun:0 };
+const CACHE_TTL = 12 * 3600 * 1000;             // 一覧キャッシュ 12時間
+
+let WORKS  = [];
+let filter = 'all';
+let Q      = null;
+
+function loadMy(){ try{ const v=JSON.parse(localStorage.getItem(MY_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function saveMy(a){ localStorage.setItem(MY_KEY, JSON.stringify(a)); }
+function isPicked(id){ return loadMy().some(a=>a.id===id); }
+
+// ---- JSTの「今」 ----
+function jstNow(){
+  const p = new Intl.DateTimeFormat('en-US',{
+    timeZone:'Asia/Tokyo', year:'numeric',month:'2-digit',day:'2-digit'
+  }).formatToParts(new Date());
+  const g=t=>p.find(x=>x.type===t).value;
+  return { y:+g('year'), m:+g('month'), d:+g('day') };
+}
+function currentQuarter(){
+  const n = jstNow();
+  const qStart = Math.floor((n.m-1)/3)*3 + 1;
+  return { year:n.y, qStart, months:[qStart,qStart+1,qStart+2],
+           label:`${n.y} ${({1:'冬',4:'春',7:'夏',10:'秋'})[qStart]}`,
+           key:`as_syobo_${n.y}_${qStart}` };
+}
+
+// ---- UNIX秒(JST) → 放送曜日/時刻（深夜は前日27:00表記） ----
+function slotFromStTime(st){
+  const p = new Intl.DateTimeFormat('en-US',{
+    timeZone:'Asia/Tokyo', weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false
+  }).formatToParts(new Date(st*1000));
+  const g=t=>p.find(x=>x.type===t).value;
+  const w={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+  let dow=w[g('weekday')], h=+g('hour'); const mm=g('minute');
+  if (h < 5) { dow=(dow+6)%7; h+=24; }
+  return { day:dow, dayLabel:DAY_JP[dow], time:`${h}:${mm}` };
+}
+function platformFromCh(ch){
+  const c = ch || '';
+  if (/ABEMA|Abema/.test(c))                     return { platform:'ABEMA',  pk:'abema' };
+  if (/U-?NEXT|ＵーＮＥＸＴ/.test(c))             return { platform:'U-NEXT', pk:'unext' };
+  if (/Prime|プライム/.test(c))                  return { platform:'Prime',  pk:'prime' };
+  if (/Netflix|ネットフリックス|ネトフリ/.test(c)) return { platform:'Netflix',pk:'unext' };
+  return { platform:c || 'TV', pk:'tv' };
+}
+
+const EMOJIS = ['🎬','✨','🌙','🔥','🌸','⚔️','💫','🎭','🌊','🎀','🧊','🍂','🌳','🎮','💘','🪐','🌟','🦊','🐉','🎨'];
+const COLORS = [
+  ['#1a2040','#2a3060'],['#2a1020','#3a1830'],['#1a1030','#2a1840'],['#102020','#183030'],
+  ['#201828','#302038'],['#281020','#381830'],['#182010','#283018'],['#102030','#183040'],
+  ['#181820','#282830'],['#281018','#381820'],['#201020','#301830'],['#201810','#302018'],
+];
+function hashNum(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return Math.abs(h); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---- TitleMedium全件 → 今クール×Cat=1 の作品配列 ----
+function buildSeason(titles){
+  const out = [];
+  for (const tid in titles){
+    const t  = titles[tid];
+    const fy = parseInt(t.FirstYear,10), fm = parseInt(t.FirstMonth,10);
+    if (fy !== Q.year || !Q.months.includes(fm)) continue;
+    if (String(t.Cat) !== '1') continue;                 // TVアニメのみ
+    const hk = hashNum(tid), col = COLORS[hk % COLORS.length];
+    out.push({
+      id:'sc'+tid, tid,
+      title:(t.Title||'').trim(),
+      shortTitle:(t.ShortTitle||'').trim(),
+      emoji:EMOJIS[hk % EMOJIS.length],
+      day:null, dayOfWeek:null, dayLabel:'', time:'',
+      ch:'', platform:'', pk:'tv', note:'',
+      imageUrl:'', color1:col[0], color2:col[1],
+      source:'syobocal',
+    });
+  }
+  return out;
+}
+
+// ---- 今日分の放送で曜日/時刻/配信を補完 ----
+function enrich(progs){
+  const earliest = {};
+  for (const pid in progs){
+    const p = progs[pid], tid = p.TID, st = +p.StTime;
+    if (!tid || !st) continue;
+    if (!earliest[tid] || st < earliest[tid].st) earliest[tid] = { st, ch:p.ChName };
+  }
+  let n = 0;
+  WORKS.forEach(w=>{
+    const e = earliest[w.tid];
+    if (!e || w.day !== null) return;
+    const sl = slotFromStTime(e.st), pf = platformFromCh(e.ch);
+    w.day=sl.day; w.dayOfWeek=sl.day; w.dayLabel=sl.dayLabel; w.time=sl.time;
+    w.ch=e.ch; w.platform=pf.platform; w.pk=pf.pk;
+    n++;
+  });
+  return n;
+}
+
+function sortWorks(){
+  WORKS.sort((a,b)=>{
+    const ak=a.day===null?9:a.day, bk=b.day===null?9:b.day;
+    if (ak!==bk) return ak-bk;
+    if (a.day===null) return a.title.localeCompare(b.title,'ja');
+    return a.time.localeCompare(b.time,'ja',{numeric:true});
+  });
+}
+
+// ============================================================
+// 描画
+// ============================================================
+function setState(html){ document.getElementById('state').innerHTML = html; }
+
+function render(){
+  const grid = document.getElementById('works-grid');
+  document.getElementById('picked-count').textContent = loadMy().length;
+
+  let list = WORKS.slice();
+  if (filter === 'picked')      list = list.filter(a=>isPicked(a.id));
+  else if (filter !== 'all'){
+    const dn = DAY_FILT[filter];
+    if (dn !== undefined) list = list.filter(a=>a.day === dn);
+  }
+
+  if (!WORKS.length){ grid.innerHTML=''; return; }
+  if (!list.length){
+    grid.innerHTML='';
+    setState('<div class="state-box"><span class="state-emoji">🗂️</span>'
+      +(filter==='picked'?'まだ追加した作品はありません':'この曜日に判明している作品はまだありません<br><small>放送時間は来訪のたびに少しずつ補完されます</small>')+'</div>');
+    return;
+  }
+  setState('');
+
+  grid.innerHTML = list.map((a,i)=>{
+    const on = isPicked(a.id);
+    const hasSlot = a.day !== null;
+    return `
+    <div class="work-card ${on?'picked':''}" style="animation-delay:${Math.min(i,12)*0.03}s">
+      <div class="card-thumb">
+        <div class="card-thumb-dummy" style="background:linear-gradient(135deg,${a.color1},${a.color2})">
+          <span class="dummy-emoji">${a.emoji}</span>
+          <span class="dummy-label">SYOBOCAL</span>
+        </div>
+        <div class="card-overlay"></div>
+        <div class="card-platform ${a.pk}">${escapeHtml(a.platform || 'TVアニメ')}</div>
+        ${hasSlot ? `<div class="card-day">${a.dayLabel}曜</div>` : ''}
+        <div class="card-info-overlay">
+          <div class="card-time">🕐 ${hasSlot ? escapeHtml(a.time) : '時間未取得'}</div>
+          <div class="card-title-overlay">${escapeHtml(a.title)}</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <button class="pick-btn ${on?'on':''}" onclick="toggle('${a.id}')">
+          ${on ? '✓ 追加済み' : '＋ 追加'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggle(id){
+  const w = WORKS.find(x=>x.id===id);
+  if (!w) return;
+  const my = loadMy();
+  const i = my.findIndex(a=>a.id===id);
+  if (i>=0){ my.splice(i,1); showToast(`${w.emoji} 解除しました`); }
+  else     {
+    // 既存ページ(works/ranking/calendar)で崩れないよう表示用の既定値を補う
+    my.push({ ...w, time:w.time||'時間未取得', dayLabel:w.dayLabel||'未定' });
+    showToast(`${w.emoji} 追加しました`);
+  }
+  saveMy(my);
+  render();
+}
+
+function setFilter(f, btn){
+  filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// ============================================================
+// JSONP
+// ============================================================
+function jsonp(url, timeoutMs){
+  return new Promise((resolve,reject)=>{
+    const cb='__sc'+Math.random().toString(36).slice(2);
+    let s, tm;
+    const done=fn=>v=>{ if(tm)clearTimeout(tm); delete window[cb]; if(s&&s.parentNode)s.parentNode.removeChild(s); fn(v); };
+    const ok=done(resolve), ng=done(reject);
+    window[cb]=ok;
+    s=document.createElement('script');
+    s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;
+    s.onerror=()=>ng(new Error('network'));
+    tm=setTimeout(()=>ng(new Error('timeout')), timeoutMs||20000);
+    document.head.appendChild(s);
+  });
+}
+
+// ---- キャッシュ ----
+function readCache(){
+  try{
+    const c=JSON.parse(localStorage.getItem(Q.key)||'null');
+    if(c && Array.isArray(c.works) && (Date.now()-c.ts)<CACHE_TTL) return c;
+  }catch(e){}
+  return null;
+}
+function writeCache(){
+  try{ localStorage.setItem(Q.key, JSON.stringify({ ts:Date.now(), works:WORKS })); }catch(e){}
+}
+
+// ---- 取得フロー ----
+async function load(force){
+  Q = currentQuarter();
+  document.getElementById('nav-season').textContent  = Q.label;
+  document.getElementById('season-label').textContent = Q.label;
+
+  // 1) 一覧（キャッシュ優先）
+  const cached = force ? null : readCache();
+  if (cached){
+    WORKS = cached.works;
+    sortWorks(); render();
+  } else {
+    setState('<div class="state-box"><div class="spinner"></div>'
+      +'しょぼいカレンダーから今期一覧を取得中…<br><small>初回は数百KBの取得があります</small></div>');
+    try{
+      const d = await jsonp(`${SYOBO}?Req=TitleMedium`, 30000);
+      WORKS = buildSeason((d && d.Titles) || {});
+      if (!WORKS.length){
+        setState('<div class="state-box"><span class="state-emoji">🌱</span>'
+          +`${escapeHtml(Q.label)}の新作TVアニメがまだ登録されていないようです。<br>時期をおいて再取得してください。</div>`);
+        return;
+      }
+      sortWorks(); render(); writeCache();
+    }catch(e){
+      setState('<div class="state-box"><span class="state-emoji">📡</span>'
+        +'しょぼいカレンダーに接続できませんでした。<br>'
+        +(e.message==='timeout'?'取得がタイムアウトしました。':'通信環境を確認してください。')
+        +'<br>「↻ 再取得」をお試しください。</div>');
+      return;
+    }
+  }
+
+  // 2) 今日分の放送で曜日/時刻/配信を補完（軽量・失敗は無視）
+  try{
+    const p = await jsonp(`${SYOBO}?Req=ProgramByDate,TitleMedium`, 15000);
+    if (p && p.Programs && enrich(p.Programs) > 0){
+      sortWorks(); render(); writeCache();
+    }
+  }catch(e){ /* 補完は任意。一覧は表示済み */ }
+}
+
+function reload(){ WORKS=[]; render(); load(true); }
+
+// 初期化
+load(false);
+</script>
+</body>
+</html>

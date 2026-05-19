@@ -387,8 +387,8 @@ main { position:relative; z-index:1; padding:20px 16px; }
   <div class="bn-item active">
     <span class="bn-icon">🏆</span><span>ランキング</span>
   </div>
-  <div class="bn-item">
-    <span class="bn-icon">💬</span><span>コミュニティ</span>
+  <div class="bn-item" onclick="location.href='animesync_discover.html'">
+    <span class="bn-icon">🎬</span><span>作品</span>
   </div>
   <div class="bn-item" onclick="location.href='animesync_mypage.html'">
     <span class="bn-icon">👤</span><span>マイページ</span>
@@ -419,6 +419,17 @@ const ANIMES = [
   { id:'akane',        title:'あかね噺',                                  emoji:'🎭' },
   { id:'nihonsangoku', title:'日本三國',                                  emoji:'⚔️' },
 ];
+
+// ── しょぼいカレンダー連携: 「今期から追加」で選んだ作品を取り込む ──
+try {
+  const __my = JSON.parse(localStorage.getItem('as_my_season') || '[]');
+  if (Array.isArray(__my)) {
+    const __have = new Set(ANIMES.map(a => a.id));
+    __my.forEach(a => {
+      if (a && a.id && !__have.has(a.id)) { ANIMES.push(a); __have.add(a.id); }
+    });
+  }
+} catch (e) { /* localStorage 不可時は既存データのみ */ }
 
 const SCORES = { kami:5, yoin:3, fubin:1 };
 const EMOTION_LABEL = { kami:'✨ 神', yoin:'🌊 余韻', fubin:'💔 不憫' };
