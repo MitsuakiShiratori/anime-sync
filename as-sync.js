@@ -22,6 +22,7 @@
   // ▲▲▲ Project Settings → API で確認できます ▲▲▲
 
   var SEASON_KEY = 'as_my_season';
+  var ANNICT_TOKEN_KEY = 'as_annict_token';  // Annict個人用トークン（dataに同梱して同期）
   var SYNC_AT    = 'as_my_season_sync_at';   // 最後に取り込んだ remote updated_at
   var RELOAD_GUARD = 'as_sync_reloaded';     // sessionStorage: reload ループ防止
   var TABLE      = 'season_sync';
@@ -43,8 +44,40 @@
     catch (e) { return ''; }
   }
 
+  // ---- Annict トークン（同一 data jsonb に同梱して同期）----
+  function localAnnict() {
+    try { return localStorage.getItem(ANNICT_TOKEN_KEY) || ''; } catch (e) { return ''; }
+  }
+  function setLocalAnnict(v) {
+    try {
+      if (v) localStorage.setItem(ANNICT_TOKEN_KEY, v);
+      else localStorage.removeItem(ANNICT_TOKEN_KEY);
+    } catch (e) {}
+  }
+  // remote の data を {season:[], annict} に正規化。
+  //   配列(旧形式)は season のみ → annict は触らない(undefined)。
+  function normRemote(d) {
+    if (Array.isArray(d)) return { season: d, annict: undefined };
+    if (d && typeof d === 'object') return {
+      season: Array.isArray(d.season) ? d.season : [],
+      annict: (typeof d.annict === 'string') ? d.annict : ''
+    };
+    return { season: [], annict: undefined };
+  }
+  function localPayload() { return { season: localSeason(), annict: localAnnict() }; }
+  // 変更検知: season の id 集合 + annict（remote 未知時はローカル基準で比較）
+  function paySig(p) {
+    var a = (p.annict === undefined) ? localAnnict() : p.annict;
+    return sig(p.season) + '' + a;
+  }
+
   var listeners = [];
   function emit(evt, payload) {
+    if (evt === 'error') {
+      // 同期エラーは握りつぶさず必ず可視化（F12 / リスナ）
+      try { console.warn('[AnimeSync] error:',
+        (payload && (payload.message || payload.error_description)) || payload, payload); } catch (e) {}
+    }
     listeners.forEach(function (cb) { try { cb(evt, payload); } catch (e) {} });
     try { window.dispatchEvent(new CustomEvent('animesync:' + evt, { detail: payload })); } catch (e) {}
   }
@@ -84,10 +117,12 @@
             return pushSeason().then(function () { emit('synced', { direction: 'init' }); });
           }
           var lastAt = localStorage.getItem(SYNC_AT) || '';
-          var changed = sig(row.data) !== sig(localSeason());
+          var rem = normRemote(row.data);
+          var changed = paySig(rem) !== paySig(localPayload());
           // remote の方が新しい、またはローカル未同期なら取り込む
           if (row.updated_at && row.updated_at !== lastAt) {
-            setLocalSeason(row.data || []);
+            setLocalSeason(rem.season);
+            if (rem.annict !== undefined) setLocalAnnict(rem.annict);
             try { localStorage.setItem(SYNC_AT, row.updated_at); } catch (e) {}
             emit('synced', { direction: 'pull' });
             // reload ガードは updated_at をキーにする:
@@ -115,7 +150,7 @@
       if (!user) return { skipped: true };
       var now = new Date().toISOString();
       return client.from(TABLE)
-        .upsert({ user_id: user.id, data: localSeason(), updated_at: now }, { onConflict: 'user_id' })
+        .upsert({ user_id: user.id, data: localPayload(), updated_at: now }, { onConflict: 'user_id' })
         .then(function (r) {
           if (r.error) { emit('error', r.error); return r; }
           try { localStorage.setItem(SYNC_AT, now); } catch (e) {}

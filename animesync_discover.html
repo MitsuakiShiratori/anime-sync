@@ -592,11 +592,19 @@ function saveAnnictToken(){
   updateAnnictUI();
   showToast('🖼️ Annict連携を保存しました');
   annictEnrich(true);
+  acctPushToken();
 }
 function clearAnnictToken(){
   try{ localStorage.removeItem(ANNICT_KEY); }catch(e){}
   updateAnnictUI();
   showToast('Annict連携を解除しました');
+  acctPushToken();
+}
+// ログイン中なら Annict トークンの変更も Supabase へ反映
+function acctPushToken(){
+  if(window.AnimeSync && AnimeSync.configured && AnimeSync.pushSeason){
+    var p=AnimeSync.pushSeason(); if(p&&p.catch) p.catch(function(){});
+  }
 }
 
 // しょぼいの表記ゆれを吸収する正規化
@@ -782,6 +790,11 @@ if (window.AnimeSync && AnimeSync.onChange) {
     if(evt==='synced'){ render(); refreshAcct(); }
     if(evt==='auth'){ refreshAcct(); }
     if(evt==='config' && p && !p.configured){ setAcctStatus('☁️ 同期: 未設定', false); }
+    if(evt==='error'){
+      var em=(p&&(p.message||p.error_description||p.msg))||'同期エラー';
+      var cd=(p&&(p.code||p.status))?(' ['+(p.code||p.status)+']'):'';
+      setAcctStatus('⚠️ 同期エラー: '+em+cd, false);
+    }
   });
 }
 
