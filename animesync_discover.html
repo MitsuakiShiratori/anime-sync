@@ -321,11 +321,14 @@ main { position:relative; z-index:1; padding:16px; }
 //
 //  しょぼいカレンダー json.php の挙動（実測）:
 //   - ProgramByDate は Start/Days を無視し常に「今日」分のみ返す
+//     （= 開いた曜日に全作品が寄る “全部火曜” バグの原因。不使用）
+//   - ProgramByCount&TID=..&Count=1 は TID単位で実放送回(地上波+配信)を
+//     今日非依存で返す。複数TIDカンマ一括可。
 //   - TitleMedium(TID未指定) は全タイトルを返す（gzip約740KB）
 //  そこで:
 //   ① TitleMedium 全件 → 今クール×Cat=1(TVアニメ) で一覧化（12hキャッシュ）
-//   ② ProgramByDate,TitleMedium（今日分・約75KB）で
-//      放送曜日/時刻/配信を判明した分だけ補完（来訪を重ねるほど埋まる）
+//   ② ProgramByCount(全TID,Count=1) で各作品の放送回を取得し、
+//      “配信(ABEMA等)の最速曜日” を算出（無ければ地上波最速にフォールバック）
 //   ③ Annict GraphQL（任意・要トークン）でカバー画像を補完
 //  しょぼいはCORS不可のため JSONP、AnnictはCORS可のため fetch を使用。
 // ============================================================
@@ -379,13 +382,24 @@ function slotFromStTime(st){
   if (h < 5) { dow=(dow+6)%7; h+=24; }
   return { day:dow, dayLabel:DAY_JP[dow], time:`${h}:${mm}` };
 }
-function platformFromCh(ch){
+// チャンネルを「ネット配信サービスか」で分類し、表示用プラットフォームを返す。
+// （しょぼいは時刻付き配信として実質ABEMA系を保持。Netflix/dアニメ等の
+//  見放題は時刻を持たないため出現は限定的）
+const STREAM_RE = /ABEMA|Abema|dアニメ|ｄアニメ|d ?アニメ|Netflix|ネットフリックス|ネトフリ|U-?NEXT|ＵーＮＥＸＴ|Prime|プライム|Amazon|Lemino|dTV|ｄTV|FOD|Hulu|ディズニー|Disney|バンダイチャンネル|アニメ放題|ニコニコ|niconico|YouTube|Crunchyroll/i;
+function classifyCh(ch){
   const c = ch || '';
-  if (/ABEMA|Abema/.test(c))                     return { platform:'ABEMA',  pk:'abema' };
-  if (/U-?NEXT|ＵーＮＥＸＴ/.test(c))             return { platform:'U-NEXT', pk:'unext' };
-  if (/Prime|プライム/.test(c))                  return { platform:'Prime',  pk:'prime' };
-  if (/Netflix|ネットフリックス|ネトフリ/.test(c)) return { platform:'Netflix',pk:'unext' };
-  return { platform:c || 'TV', pk:'tv' };
+  const stream = STREAM_RE.test(c);
+  let platform = c || 'TV', pk = 'tv';
+  if (/ABEMA|Abema/.test(c))                            { platform='ABEMA';   pk='abema'; }
+  else if (/Prime|プライム|Amazon/.test(c))             { platform='Prime';   pk='prime'; }
+  else if (/Netflix|ネットフリックス|ネトフリ/.test(c)) { platform='Netflix'; pk='unext'; }
+  else if (/U-?NEXT|ＵーＮＥＸＴ/.test(c))               { platform='U-NEXT';  pk='unext'; }
+  else if (/dアニメ|ｄアニメ|d ?アニメ/.test(c))        { platform='dアニメ'; pk='unext'; }
+  else if (/Lemino|dTV|ｄTV/.test(c))                    { platform='Lemino';  pk='unext'; }
+  else if (/ニコニコ|niconico/.test(c))                 { platform='ニコニコ'; pk='tv'; }
+  else if (/YouTube/.test(c))                           { platform='YouTube'; pk='tv'; }
+  else if (stream)                                      { platform=c;          pk='unext'; }
+  return { stream, platform, pk };
 }
 
 const EMOJIS = ['🎬','✨','🌙','🔥','🌸','⚔️','💫','🎭','🌊','🎀','🧊','🍂','🌳','🎮','💘','🪐','🌟','🦊','🐉','🎨'];
@@ -420,23 +434,45 @@ function buildSeason(titles){
   return out;
 }
 
-// ---- 今日分の放送で曜日/時刻/配信を補完 ----
-function enrich(progs){
-  const earliest = {};
+// ---- ProgramByCount の結果で「配信最速曜日」を補完 ----
+//  各TIDの放送回のうち、配信ch(ABEMA等)があればその最速を、無ければ
+//  地上波最速を採用。今日非依存なので “全部火曜” にならない。
+//  既存値があっても毎回上書き（古いキャッシュの誤曜日を自己修復）。
+function enrichByCount(progs){
+  const byTid = {};
   for (const pid in progs){
     const p = progs[pid], tid = p.TID, st = +p.StTime;
     if (!tid || !st) continue;
-    if (!earliest[tid] || st < earliest[tid].st) earliest[tid] = { st, ch:p.ChName };
+    (byTid[tid] = byTid[tid] || []).push({ st, ch:p.ChName });
   }
   let n = 0;
+  const patch = {};
   WORKS.forEach(w=>{
-    const e = earliest[w.tid];
-    if (!e || w.day !== null) return;
-    const sl = slotFromStTime(e.st), pf = platformFromCh(e.ch);
+    const list = byTid[w.tid];
+    if (!list || !list.length) return;            // 情報なし → 既存(キャッシュ/null)維持
+    list.sort((a,b)=>a.st-b.st);
+    const streams = list.filter(x=>classifyCh(x.ch).stream);
+    const pick = streams.length ? streams[0] : list[0];
+    const sl = slotFromStTime(pick.st), cf = classifyCh(pick.ch);
     w.day=sl.day; w.dayOfWeek=sl.day; w.dayLabel=sl.dayLabel; w.time=sl.time;
-    w.ch=e.ch; w.platform=pf.platform; w.pk=pf.pk;
-    n++;
+    w.ch=pick.ch; w.platform=cf.platform; w.pk=cf.pk;
+    w.fastKind = streams.length ? 'stream' : 'tv';
+    w.note     = streams.length ? '配信最速' : '地上波(配信情報なし)';
+    patch[w.tid] = w; n++;
   });
+  // 選択済み(as_my_season)も同じ放送情報へ更新 → 全ページ＆Supabaseへ波及
+  try{
+    const my = loadMy(); let dirty = false;
+    my.forEach(m=>{
+      const w = patch[m.tid]; if (!w) return;
+      if (m.day!==w.day || m.time!==w.time || m.pk!==w.pk || m.platform!==w.platform){
+        m.day=w.day; m.dayOfWeek=w.day; m.dayLabel=w.dayLabel; m.time=w.time;
+        m.ch=w.ch; m.platform=w.platform; m.pk=w.pk; m.note=w.note;
+        dirty = true;
+      }
+    });
+    if (dirty) saveMy(my);                         // saveMy はログイン中なら Supabase push も実行
+  }catch(e){}
   return n;
 }
 
@@ -727,12 +763,18 @@ async function load(force){
     }
   }
 
-  // 2) 今日分の放送で曜日/時刻/配信を補完（軽量・失敗は無視）
+  // 2) ProgramByCount(全TID,Count=1)で「配信最速曜日」を補完
+  //    （TID単位・今日非依存。ProgramByDateの“全部火曜”を解消）
   try{
-    const p = await jsonp(`${SYOBO}?Req=ProgramByDate,TitleMedium`, 15000);
-    if (p && p.Programs && enrich(p.Programs) > 0){
-      sortWorks(); render(); writeCache();
+    const tids = WORKS.map(w=>w.tid).filter(Boolean);
+    const CHUNK = 80;
+    const merged = {};
+    for (let i=0;i<tids.length;i+=CHUNK){
+      const part = tids.slice(i,i+CHUNK).join(',');
+      const r = await jsonp(`${SYOBO}?Req=ProgramByCount&TID=${part}&Count=1`, 20000);
+      if (r && r.Programs) Object.assign(merged, r.Programs);
     }
+    if (enrichByCount(merged) > 0){ sortWorks(); render(); writeCache(); }
   }catch(e){ /* 補完は任意。一覧は表示済み */ }
 
   // 3) Annictでカバー画像を補完（トークンがあれば。失敗は無視）
