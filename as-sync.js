@@ -17,8 +17,8 @@
   'use strict';
 
   // ▼▼▼ ここを自分の Supabase プロジェクトの値に置き換える ▼▼▼
-  var SUPABASE_URL      = 'https://YOUR-PROJECT-ref.supabase.co';
-  var SUPABASE_ANON_KEY = 'YOUR-PUBLIC-ANON-KEY';
+  var SUPABASE_URL      = 'https://idciktxylicjonefjqfr.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkY2lrdHh5bGljam9uZWZqcWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjMyMTIsImV4cCI6MjA4NzczOTIxMn0.UEkyps4lpL8S4XCo8ECl8Ptr4Rd5w_vD7BrFUjDBvR4';
   // ▲▲▲ Project Settings → API で確認できます ▲▲▲
 
   var SEASON_KEY = 'as_my_season';
