@@ -252,6 +252,33 @@ main { position:relative; z-index:1; padding:16px; }
       </div>
     </div>
   </div>
+
+  <!-- Supabase アカウント同期 -->
+  <div class="annict-bar">
+    <div class="annict-row">
+      <span class="annict-status" id="acct-status">☁️ 同期: 未ログイン</span>
+      <button class="disc-btn" style="padding:6px 12px;font-size:11px;" onclick="toggleAcctPanel()">アカウント</button>
+    </div>
+    <div class="annict-panel" id="acct-panel" style="display:none;">
+      <p class="annict-help">
+        ログインすると<b>選んだ作品（as_my_season）</b>がデバイス間で同期されます。
+        メール＋パスワードで登録／ログインできます。<br>
+        パスワードは Supabase が安全に管理し、この画面には保存しません。
+      </p>
+      <div class="annict-input-row">
+        <input id="acct-email" type="email" placeholder="メールアドレス"
+               autocomplete="username" spellcheck="false">
+        <input id="acct-pass" type="password" placeholder="パスワード（6文字以上）"
+               autocomplete="current-password" spellcheck="false">
+      </div>
+      <div class="annict-input-row" style="margin-top:6px;">
+        <button class="disc-btn primary" onclick="acctSignIn()">ログイン</button>
+        <button class="disc-btn" onclick="acctSignUp()">新規登録</button>
+        <button class="disc-btn" onclick="acctSync()">↻ 今すぐ同期</button>
+        <button class="disc-btn" onclick="acctSignOut()">ログアウト</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- フィルターバー -->
@@ -283,6 +310,7 @@ main { position:relative; z-index:1; padding:16px; }
 
 <div class="toast" id="toast"></div>
 
+<script src="as-sync.js"></script>
 <script>
 // ============================================================
 // AnimeSync — 今期から追加（しょぼいカレンダー連携）
@@ -311,7 +339,13 @@ let Q      = null;
 let annictCachedTs = 0;                          // 画像取得の最終成功時刻
 
 function loadMy(){ try{ const v=JSON.parse(localStorage.getItem(MY_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
-function saveMy(a){ localStorage.setItem(MY_KEY, JSON.stringify(a)); }
+function saveMy(a){
+  localStorage.setItem(MY_KEY, JSON.stringify(a));
+  // ログイン中なら Supabase へ push（デバイス間同期）
+  if (window.AnimeSync && AnimeSync.configured && AnimeSync.pushSeason) {
+    var p = AnimeSync.pushSeason(); if (p && p.catch) p.catch(function(){});
+  }
+}
 function isPicked(id){ return loadMy().some(a=>a.id===id); }
 
 // ---- JSTの「今」 ----
@@ -695,8 +729,54 @@ async function load(force){
 
 function reload(){ WORKS=[]; render(); load(true); }
 
+// ============================================================
+// Supabase アカウント同期 UI
+// ============================================================
+function toggleAcctPanel(){ var p=document.getElementById('acct-panel'); if(p) p.style.display=(p.style.display==='none')?'block':'none'; }
+function setAcctStatus(t,on){ var e=document.getElementById('acct-status'); if(e){ e.textContent=t; e.classList.toggle('on',!!on); } }
+function acctVal(id){ var e=document.getElementById(id); return (e&&e.value||'').trim(); }
+function syncReady(){
+  if(!window.AnimeSync){ showToast('同期未初期化'); return false; }
+  if(!AnimeSync.configured){ setAcctStatus('☁️ 同期: 未設定（as-sync.js を設定）', false); showToast('as-sync.js に Supabase の値を設定してください'); return false; }
+  return true;
+}
+function refreshAcct(){
+  if(!window.AnimeSync || !AnimeSync.configured){ setAcctStatus('☁️ 同期: 未設定', false); return; }
+  AnimeSync.getUser().then(function(u){
+    if(u){ setAcctStatus('☁️ 同期中: '+(u.email||'ログイン済み'), true); }
+    else { setAcctStatus('☁️ 同期: 未ログイン', false); }
+  });
+}
+function acctSignUp(){
+  if(!syncReady()) return;
+  var em=acctVal('acct-email'), pw=acctVal('acct-pass');
+  if(!em||!pw){ showToast('メールとパスワードを入力'); return; }
+  setAcctStatus('☁️ 登録中…');
+  AnimeSync.signUp(em,pw).then(function(){ showToast('✅ 登録しました'); refreshAcct(); })
+    .catch(function(e){ setAcctStatus('⚠️ '+((e&&e.message)||'登録に失敗'), false); });
+}
+function acctSignIn(){
+  if(!syncReady()) return;
+  var em=acctVal('acct-email'), pw=acctVal('acct-pass');
+  if(!em||!pw){ showToast('メールとパスワードを入力'); return; }
+  setAcctStatus('☁️ ログイン中…');
+  AnimeSync.signIn(em,pw).then(function(){ showToast('✅ ログインしました'); refreshAcct(); })
+    .catch(function(e){ setAcctStatus('⚠️ '+((e&&e.message)||'ログインに失敗'), false); });
+}
+function acctSignOut(){ if(!syncReady()) return; AnimeSync.signOut().then(function(){ showToast('ログアウトしました'); refreshAcct(); }); }
+function acctSync(){ if(!syncReady()) return; setAcctStatus('☁️ 同期中…'); Promise.resolve(AnimeSync.pull()).then(function(){ refreshAcct(); }); }
+
+if (window.AnimeSync && AnimeSync.onChange) {
+  AnimeSync.onChange(function(evt,p){
+    if(evt==='synced'){ render(); refreshAcct(); }
+    if(evt==='auth'){ refreshAcct(); }
+    if(evt==='config' && p && !p.configured){ setAcctStatus('☁️ 同期: 未設定', false); }
+  });
+}
+
 // 初期化
 updateAnnictUI();
+refreshAcct();
 load(false);
 </script>
 </body>
