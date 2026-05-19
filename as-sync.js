@@ -156,6 +156,18 @@
       });
     },
 
+    // Google OAuth: 現ページへ戻るフルリダイレクト。
+    // 復帰時に supabase-js が URL のトークンを検出 → onAuthStateChange
+    // (SIGNED_IN) → pull() が走り、各ページへ同期される。
+    signInWithGoogle: function () {
+      if (!client) return Promise.reject(new Error('未設定'));
+      var redirectTo = location.origin + location.pathname;
+      return client.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: redirectTo }
+      }).then(function (r) { if (r.error) throw r.error; return r.data; });
+    },
+
     signOut: function () {
       if (!client) return Promise.resolve();
       return client.auth.signOut(); // ローカルの as_my_season は保持（消さない）

@@ -262,9 +262,13 @@ main { position:relative; z-index:1; padding:16px; }
     <div class="annict-panel" id="acct-panel" style="display:none;">
       <p class="annict-help">
         ログインすると<b>選んだ作品（as_my_season）</b>がデバイス間で同期されます。
-        メール＋パスワードで登録／ログインできます。<br>
-        パスワードは Supabase が安全に管理し、この画面には保存しません。
+        Google ログイン、またはメール＋パスワードが使えます。<br>
+        認証情報は Supabase が安全に管理し、この画面には保存しません。
       </p>
+      <div class="annict-input-row" style="margin-bottom:8px;">
+        <button class="disc-btn primary" style="flex:1;min-width:170px;" onclick="acctGoogle()">🔵 Google でログイン</button>
+      </div>
+      <div style="font-size:10px;color:var(--muted2);text-align:center;margin-bottom:8px;">— または メール＋パスワード —</div>
       <div class="annict-input-row">
         <input id="acct-email" type="email" placeholder="メールアドレス"
                autocomplete="username" spellcheck="false">
@@ -765,6 +769,13 @@ function acctSignIn(){
 }
 function acctSignOut(){ if(!syncReady()) return; AnimeSync.signOut().then(function(){ showToast('ログアウトしました'); refreshAcct(); }); }
 function acctSync(){ if(!syncReady()) return; setAcctStatus('☁️ 同期中…'); Promise.resolve(AnimeSync.pull()).then(function(){ refreshAcct(); }); }
+function acctGoogle(){
+  if(!syncReady()) return;
+  setAcctStatus('☁️ Google へ移動中…');
+  AnimeSync.signInWithGoogle().catch(function(e){
+    setAcctStatus('⚠️ '+((e&&e.message)||'Google 認証に失敗'), false);
+  });
+}
 
 if (window.AnimeSync && AnimeSync.onChange) {
   AnimeSync.onChange(function(evt,p){
