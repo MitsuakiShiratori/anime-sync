@@ -327,9 +327,15 @@ main { position:relative; z-index:1; padding:16px; }
 //   - TitleMedium(TID未指定) は全タイトルを返す（gzip約740KB）
 //  そこで:
 //   ① TitleMedium 全件 → 今クール×Cat=1(TVアニメ) で一覧化（12hキャッシュ）
-//   ② ProgramByCount(全TID,Count=1) で各作品の放送回を取得し、
-//      “配信(ABEMA等)の最速曜日” を算出（無ければ地上波最速にフォールバック）
-//   ③ Annict GraphQL（任意・要トークン）でカバー画像を補完
+//      ※ 先行放送(例: 春クールの3月最終週開始)を拾うため、月フィルタは
+//        「前月＋当クール3ヶ月」の4ヶ月分まで拡張する
+//   ② ProgramByCount(Count=1, Count=2 を並列取得)で各作品の放送回を取得し、
+//      “配信(ABEMA等)の最速曜日” を算出。第1話と第2話の間隔が 8日超〜14日以下
+//      のときは「先行放送あり」とみなして第2話 StTime を曜日基準にする（ハイブリッド）。
+//      無ければ地上波最速にフォールバック
+//   ③ Count=1 StTime がクール範囲(前月15日〜末月末)外の作品は除外
+//      （“前月扱い”だが実体が次クールの作品が紛れ込むのを防止）
+//   ④ Annict GraphQL（任意・要トークン）でカバー画像を補完
 //  しょぼいはCORS不可のため JSONP、AnnictはCORS可のため fetch を使用。
 // ============================================================
 const MY_KEY = 'as_my_season';                  // 選択済み（works/ranking/calendar が参照）
@@ -412,12 +418,19 @@ function hashNum(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ---- TitleMedium全件 → 今クール×Cat=1 の作品配列 ----
+// 月フィルタは「前月＋当クール3ヶ月」の4ヶ月分（先行放送を取りこぼさないため）。
+// 範囲を広げる代償に、後段の applyRangeFilter で Count=1 StTime による
+// クール範囲チェックを行い、次クール作品の紛れ込みを排除する。
 function buildSeason(titles){
+  const prevY = Q.qStart === 1 ? Q.year - 1 : Q.year;
+  const prevM = Q.qStart === 1 ? 12 : Q.qStart - 1;
   const out = [];
   for (const tid in titles){
     const t  = titles[tid];
     const fy = parseInt(t.FirstYear,10), fm = parseInt(t.FirstMonth,10);
-    if (fy !== Q.year || !Q.months.includes(fm)) continue;
+    const okPrev = (fy === prevY && fm === prevM);
+    const okMain = (fy === Q.year && Q.months.includes(fm));
+    if (!okPrev && !okMain) continue;
     if (String(t.Cat) !== '1') continue;                 // TVアニメのみ
     const hk = hashNum(tid), col = COLORS[hk % COLORS.length];
     out.push({
@@ -428,36 +441,85 @@ function buildSeason(titles){
       day:null, dayOfWeek:null, dayLabel:'', time:'',
       ch:'', platform:'', pk:'tv', note:'',
       imageUrl:'', color1:col[0], color2:col[1],
+      _firstMonth: fm,                                   // applyRangeFilter 用
       source:'syobocal',
     });
   }
   return out;
 }
 
-// ---- ProgramByCount の結果で「配信最速曜日」を補完 ----
+// クール期間レンジ(UNIX秒, JST基準): 前月15日 00:00 〜 末月の月末 23:59:59
+function rangeBounds(){
+  const prevY = Q.qStart === 1 ? Q.year - 1 : Q.year;
+  const prevM = Q.qStart === 1 ? 12 : Q.qStart - 1;
+  const startMs = Date.UTC(prevY, prevM - 1, 15, 0, 0, 0) - 9 * 3600 * 1000;
+  // 末月(qStart+2: 冬=3,春=6,夏=9,秋=12)の翌月1日 00:00 JST の1秒前 = 末月末23:59:59
+  const endMs   = Date.UTC(Q.year, Q.qStart + 2, 1, 0, 0, 0) - 9 * 3600 * 1000 - 1000;
+  return { start: Math.floor(startMs/1000), end: Math.floor(endMs/1000) };
+}
+// 第1話 StTime がクール範囲外の作品を除外（FirstMonth=前月でも実体が次クールの紛れ込み対策）
+function applyRangeFilter(){
+  const b = rangeBounds();
+  const prevM = Q.qStart === 1 ? 12 : Q.qStart - 1;
+  const before = WORKS.length;
+  WORKS = WORKS.filter(w => {
+    if (w._st1) return w._st1 >= b.start && w._st1 <= b.end;
+    // プログラム情報なし: 前月扱いは不確実なので除外、本クール月扱いは時間未取得で残す
+    return w._firstMonth !== prevM;
+  });
+  return before - WORKS.length;
+}
+
+// ---- ProgramByCount(Count=1, Count=2) で「配信最速曜日」を補完 ----
 //  各TIDの放送回のうち、配信ch(ABEMA等)があればその最速を、無ければ
 //  地上波最速を採用。今日非依存なので “全部火曜” にならない。
+//  ハイブリッド: 第1話と第2話の StTime 間隔が 8日超〜14日以下のとき
+//  「先行放送あり」と判定し、第2話 StTime を曜日基準にする。
+//   - 7日前後 → 通常クール(第1話基準)
+//   - >14日   → 特番/休止扱いで第1話基準にフォールバック(誤上書き防止)
+//   - 第2話未取得 → 第1話で暫定。再取得時に上書きされる。
 //  既存値があっても毎回上書き（古いキャッシュの誤曜日を自己修復）。
-function enrichByCount(progs){
+function enrichByCount(progs1, progs2){
   const byTid = {};
-  for (const pid in progs){
-    const p = progs[pid], tid = p.TID, st = +p.StTime;
-    if (!tid || !st) continue;
-    (byTid[tid] = byTid[tid] || []).push({ st, ch:p.ChName });
+  function add(progs, count){
+    for (const pid in progs){
+      const p = progs[pid], tid = p.TID, st = +p.StTime;
+      if (!tid || !st) continue;
+      const ent = (byTid[tid] = byTid[tid] || {1:[], 2:[]});
+      ent[count].push({ st, ch:p.ChName });
+    }
   }
+  add(progs1, 1); add(progs2, 2);
+
+  function fastest(list){
+    if (!list || !list.length) return null;
+    const sorted = list.slice().sort((a,b)=>a.st-b.st);
+    const streams = sorted.filter(x => classifyCh(x.ch).stream);
+    return streams.length ? { e:streams[0], stream:true } : { e:sorted[0], stream:false };
+  }
+
   let n = 0;
   const patch = {};
   WORKS.forEach(w=>{
-    const list = byTid[w.tid];
-    if (!list || !list.length) return;            // 情報なし → 既存(キャッシュ/null)維持
-    list.sort((a,b)=>a.st-b.st);
-    const streams = list.filter(x=>classifyCh(x.ch).stream);
-    const pick = streams.length ? streams[0] : list[0];
-    const sl = slotFromStTime(pick.st), cf = classifyCh(pick.ch);
+    const slots = byTid[w.tid];
+    if (!slots) return;                                  // 情報なし → 既存(キャッシュ/null)維持
+    const p1 = fastest(slots[1]);
+    const p2 = fastest(slots[2]);
+    if (!p1) return;
+
+    let basis = p1, advance = false;
+    if (p2){
+      const itv = p2.e.st - p1.e.st;
+      if (itv > 8*86400 && itv <= 14*86400){ basis = p2; advance = true; }
+    }
+    const sl = slotFromStTime(basis.e.st), cf = classifyCh(basis.e.ch);
     w.day=sl.day; w.dayOfWeek=sl.day; w.dayLabel=sl.dayLabel; w.time=sl.time;
-    w.ch=pick.ch; w.platform=cf.platform; w.pk=cf.pk;
-    w.fastKind = streams.length ? 'stream' : 'tv';
-    w.note     = streams.length ? '配信最速' : '地上波(配信情報なし)';
+    w.ch=basis.e.ch; w.platform=cf.platform; w.pk=cf.pk;
+    w.fastKind = basis.stream ? 'stream' : 'tv';
+    w.note     = advance
+      ? (basis.stream ? '配信最速(本放送)' : '地上波(本放送)')
+      : (basis.stream ? '配信最速' : '地上波(配信情報なし)');
+    w._st1 = p1.e.st;                                    // applyRangeFilter 用
     patch[w.tid] = w; n++;
   });
   // 選択済み(as_my_season)も同じ放送情報へ更新 → 全ページ＆Supabaseへ波及
@@ -763,18 +825,25 @@ async function load(force){
     }
   }
 
-  // 2) ProgramByCount(全TID,Count=1)で「配信最速曜日」を補完
-  //    （TID単位・今日非依存。ProgramByDateの“全部火曜”を解消）
+  // 2) ProgramByCount(全TID, Count=1 と Count=2 を並列取得)で
+  //    「配信最速曜日」を補完。第2話との間隔で先行放送を検知してハイブリッド判定。
+  //    その後 applyRangeFilter で次クール紛れ込みを排除。
   try{
     const tids = WORKS.map(w=>w.tid).filter(Boolean);
     const CHUNK = 80;
-    const merged = {};
+    const merged1 = {}, merged2 = {};
     for (let i=0;i<tids.length;i+=CHUNK){
       const part = tids.slice(i,i+CHUNK).join(',');
-      const r = await jsonp(`${SYOBO}?Req=ProgramByCount&TID=${part}&Count=1`, 20000);
-      if (r && r.Programs) Object.assign(merged, r.Programs);
+      const [r1, r2] = await Promise.all([
+        jsonp(`${SYOBO}?Req=ProgramByCount&TID=${part}&Count=1`, 20000),
+        jsonp(`${SYOBO}?Req=ProgramByCount&TID=${part}&Count=2`, 20000),
+      ]);
+      if (r1 && r1.Programs) Object.assign(merged1, r1.Programs);
+      if (r2 && r2.Programs) Object.assign(merged2, r2.Programs);
     }
-    if (enrichByCount(merged) > 0){ sortWorks(); render(); writeCache(); }
+    enrichByCount(merged1, merged2);
+    applyRangeFilter();
+    sortWorks(); render(); writeCache();
   }catch(e){ /* 補完は任意。一覧は表示済み */ }
 
   // 3) Annictでカバー画像を補完（トークンがあれば。失敗は無視）
