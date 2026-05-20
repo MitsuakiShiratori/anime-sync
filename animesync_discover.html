@@ -781,6 +781,7 @@ async function fetchAnnictSeason(tok){
 
 function applyImages(map){
   let n=0;
+  const patched={};
   WORKS.forEach(w=>{
     if(w.imageUrl) return;
     const cands=[w.title,w.shortTitle].map(norm).filter(Boolean);
@@ -794,8 +795,19 @@ function applyImages(map){
         }
       }
     }
-    if(url){ w.imageUrl=url; n++; }
+    if(url){ w.imageUrl=url; patched[w.tid]=url; n++; }
   });
+  // 選択済み(as_my_season)の imageUrl が空の場合のみ補完 → mypage/TOP に波及
+  //   (saveMy 経由でログイン中なら Supabase へ自動push、全デバイスへ同期)
+  //   既に値があれば触らない: 将来の手動差し替え機能を妨げないため
+  try{
+    const my=loadMy(); let dirty=false;
+    my.forEach(m=>{
+      const u=patched[m.tid]; if(!u) return;
+      if(!m.imageUrl){ m.imageUrl=u; dirty=true; }
+    });
+    if(dirty) saveMy(my);
+  }catch(e){}
   return n;
 }
 
