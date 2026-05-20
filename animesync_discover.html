@@ -741,9 +741,20 @@ function annictSlug(){
 }
 
 async function fetchAnnictSeason(tok){
+  // image はフィールド毎に欠落しうるため4フィールドを取得し、JS側で優先順に試す:
+  //   recommendedImageUrl(推奨/きれい) → facebookOgImageUrl(OG/横長)
+  //   → originalUrl(オリジナル) → twitterImageUrl(Twitter/低解像)
   const q='query($s:[String!],$a:String){searchWorks(seasons:$s,first:50,after:$a,'
         +'orderBy:{field:WATCHERS_COUNT,direction:DESC}){pageInfo{hasNextPage endCursor}'
-        +'nodes{title titleKana image{recommendedImageUrl facebookOgImageUrl}}}}';
+        +'nodes{title titleKana image{recommendedImageUrl facebookOgImageUrl originalUrl twitterImageUrl}}}}';
+  function pickImageUrl(img){
+    if(!img) return '';
+    return img.recommendedImageUrl
+        || img.facebookOgImageUrl
+        || img.originalUrl
+        || img.twitterImageUrl
+        || '';
+  }
   const map={}; let after=null, pages=0;
   while(pages<5){
     const res=await fetch(ANNICT,{
@@ -758,7 +769,7 @@ async function fetchAnnictSeason(tok){
     const sw=j.data&&j.data.searchWorks;
     if(!sw) break;
     (sw.nodes||[]).forEach(n=>{
-      const url=(n.image&&(n.image.recommendedImageUrl||n.image.facebookOgImageUrl))||'';
+      const url=pickImageUrl(n.image);
       if(!url) return;
       [n.title,n.titleKana].forEach(t=>{ const k=norm(t); if(k&&!map[k]) map[k]=url; });
     });
