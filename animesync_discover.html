@@ -90,9 +90,12 @@ body::before {
   background:rgba(77,184,212,0.12); border-color:rgba(77,184,212,0.4); color:var(--accent);
 }
 
-/* ===== グリッド ===== */
+/* ===== 1列リスト（発見＝一覧性重視） ===== */
 main { position:relative; z-index:1; padding:16px; }
-.works-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.list-rows {
+  display:flex; flex-direction:column; gap:8px;
+  max-width:720px; margin:0 auto;
+}
 
 /* ===== 状態表示 ===== */
 .state-box { text-align:center; padding:48px 24px; color:var(--muted2); font-size:13px; line-height:1.9; }
@@ -104,59 +107,75 @@ main { position:relative; z-index:1; padding:16px; }
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
-/* ===== カード ===== */
-.work-card {
-  border-radius:14px; overflow:hidden;
-  background:var(--bg2); border:1px solid var(--border);
-  position:relative; transition:transform 0.2s, border-color 0.2s;
-  animation:cardIn 0.4s ease both;
+/* ===== 行カード ===== */
+.row-card {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  transition:border-color 0.2s, transform 0.15s;
+  animation:rowIn 0.3s ease both;
 }
-.work-card.picked { border-color:rgba(110,196,122,0.5); }
-@keyframes cardIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-.card-thumb { width:100%; aspect-ratio:3/4; position:relative; overflow:hidden; }
-.card-thumb-dummy {
+.row-card.picked { border-color:rgba(110,196,122,0.5); }
+@keyframes rowIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+.row-thumb {
+  width:44px; height:60px; border-radius:6px; overflow:hidden;
+  flex-shrink:0; background:var(--bg3);
+  position:relative;
+}
+.row-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
+.row-thumb-dummy {
   width:100%; height:100%;
   display:flex; align-items:center; justify-content:center;
-  flex-direction:column; gap:8px;
 }
-.dummy-emoji { font-size:36px; }
-.dummy-label { font-size:9px; color:var(--muted2); letter-spacing:1px; }
-.card-overlay {
-  position:absolute; inset:0;
-  background:linear-gradient(to bottom,transparent 40%,rgba(6,8,16,0.7) 70%,rgba(6,8,16,0.95) 100%);
+.row-thumb-emoji { font-size:22px; }
+
+.row-info { flex:1; min-width:0; }
+.row-title {
+  font-size:13px; font-weight:700; line-height:1.35;
+  margin-bottom:4px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; word-break:break-word;
 }
-.card-platform {
-  position:absolute; top:8px; left:8px;
-  font-size:9px; font-weight:700; padding:2px 7px;
-  border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(8px);
-  max-width:72%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+.row-meta {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  font-size:10px; color:var(--muted2);
 }
-.card-platform.abema { background:rgba(232,96,138,0.85); color:#fff; }
-.card-platform.prime { background:rgba(0,168,107,0.85);  color:#fff; }
-.card-platform.unext { background:rgba(20,20,20,0.85);   color:var(--gold); border:1px solid rgba(240,192,64,0.4); }
-.card-platform.tv    { background:rgba(30,40,60,0.85);   color:var(--muted2); }
-.card-day {
-  position:absolute; top:8px; right:8px;
-  font-size:10px; font-weight:700; padding:2px 8px;
-  border-radius:4px;
-  background:rgba(6,8,16,0.75); color:var(--muted2);
-  backdrop-filter:blur(8px); border:1px solid var(--border2);
+.row-platform-chip {
+  font-size:9px; font-weight:700; padding:1px 6px;
+  border-radius:3px; letter-spacing:0.3px;
+  max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.card-info-overlay { position:absolute; bottom:0; left:0; right:0; padding:8px 10px; }
-.card-time { font-size:10px; color:rgba(255,255,255,0.6); margin-bottom:3px; }
-.card-title-overlay {
-  font-size:12px; font-weight:700; line-height:1.3; color:#fff;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+.row-platform-chip.abema { background:rgba(232,96,138,0.2); color:var(--accent2); }
+.row-platform-chip.prime { background:rgba(0,168,107,0.22);  color:var(--accent3); }
+.row-platform-chip.unext { background:rgba(240,192,64,0.18); color:var(--gold); }
+.row-platform-chip.tv    { background:rgba(30,40,60,0.6);    color:var(--muted2); }
+
+.row-right {
+  display:flex; flex-direction:column; align-items:stretch; gap:6px;
+  flex-shrink:0; min-width:74px;
 }
-.card-body { padding:10px; }
-.pick-btn {
-  width:100%; padding:9px; border-radius:9px; cursor:pointer;
+.row-day-badge {
+  font-size:10px; font-weight:700; padding:3px 8px;
+  border-radius:4px; text-align:center;
+  background:rgba(6,8,16,0.6); color:var(--muted2);
+  border:1px solid var(--border2);
+}
+.row-day-badge.unknown { color:var(--muted); }
+.row-add-btn {
+  padding:7px 10px; border-radius:8px; cursor:pointer;
   border:1px solid var(--border2); background:rgba(255,255,255,0.03);
-  font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:700;
+  font-family:'Noto Sans JP',sans-serif; font-size:11px; font-weight:700;
   color:var(--text); transition:all 0.12s;
+  white-space:nowrap;
 }
-.pick-btn:active { transform:scale(0.96); }
-.pick-btn.on { background:rgba(110,196,122,0.16); border-color:rgba(110,196,122,0.45); color:var(--accent3); }
+.row-add-btn:active { transform:scale(0.96); }
+.row-add-btn.on {
+  background:rgba(110,196,122,0.16); border-color:rgba(110,196,122,0.45);
+  color:var(--accent3);
+}
 
 /* ===== トースト ===== */
 .toast {
@@ -225,8 +244,8 @@ main { position:relative; z-index:1; padding:16px; }
     しょぼいカレンダーから<b id="season-label">今期</b>の新作TVアニメを取得します。
   </div>
   <div class="disc-actions">
-    <button class="disc-btn primary" onclick="location.href='animesync_works.html'">
-      作品ページで見る（<span id="picked-count">0</span>）
+    <button class="disc-btn primary" onclick="location.href='animesync_mypage.html'">
+      マイページで見る（<span id="picked-count">0</span>）
     </button>
     <button class="disc-btn" onclick="reload()">↻ 再取得</button>
   </div>
@@ -300,7 +319,7 @@ main { position:relative; z-index:1; padding:16px; }
 
 <main>
   <div id="state"></div>
-  <div class="works-grid" id="works-grid"></div>
+  <div class="list-rows" id="works-grid"></div>
 </main>
 
 <!-- BOTTOM NAV -->
@@ -308,7 +327,7 @@ main { position:relative; z-index:1; padding:16px; }
   <div class="bn-item" onclick="location.href='index.html'"><span class="bn-icon">🏠</span><span>ホーム</span></div>
   <div class="bn-item" onclick="location.href='animesync_calendar.html'"><span class="bn-icon">📅</span><span>スケジュール</span></div>
   <div class="bn-item" onclick="location.href='animesync_ranking.html'"><span class="bn-icon">🏆</span><span>ランキング</span></div>
-  <div class="bn-item active" onclick="location.href='animesync_works.html'"><span class="bn-icon">🎬</span><span>作品</span></div>
+  <div class="bn-item active" onclick="location.href='animesync_discover.html'"><span class="bn-icon">🎬</span><span>作品</span></div>
   <div class="bn-item" onclick="location.href='animesync_mypage.html'"><span class="bn-icon">👤</span><span>マイページ</span></div>
 </nav>
 
@@ -576,24 +595,24 @@ function render(){
     const on = isPicked(a.id);
     const hasSlot = a.day !== null;
     const hasImg = !!(a.imageUrl && String(a.imageUrl).length);
+    const dayLabel = hasSlot ? `${a.dayLabel}曜${escapeHtml(a.time||'')}` : '時間未定';
     return `
-    <div class="work-card ${on?'picked':''}" style="animation-delay:${Math.min(i,12)*0.03}s">
-      <div class="card-thumb">
-        ${hasImg ? `<img class="card-thumb-img" src="${escapeHtml(a.imageUrl)}" alt="${escapeHtml(a.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
-        <div class="card-thumb-dummy" style="${hasImg?'display:none;':''}background:linear-gradient(135deg,${a.color1},${a.color2})">
-          <span class="dummy-emoji">${a.emoji}</span>
-          <span class="dummy-label">SYOBOCAL</span>
-        </div>
-        <div class="card-overlay"></div>
-        <div class="card-platform ${a.pk}">${escapeHtml(a.platform || 'TVアニメ')}</div>
-        ${hasSlot ? `<div class="card-day">${a.dayLabel}曜</div>` : ''}
-        <div class="card-info-overlay">
-          <div class="card-time">🕐 ${hasSlot ? escapeHtml(a.time) : '時間未取得'}</div>
-          <div class="card-title-overlay">${escapeHtml(a.title)}</div>
+    <div class="row-card ${on?'picked':''}" style="animation-delay:${Math.min(i,16)*0.02}s">
+      <div class="row-thumb">
+        ${hasImg ? `<img class="row-thumb-img" src="${escapeHtml(a.imageUrl)}" alt="${escapeHtml(a.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
+        <div class="row-thumb-dummy" style="${hasImg?'display:none;':''}background:linear-gradient(135deg,${a.color1},${a.color2})">
+          <span class="row-thumb-emoji">${a.emoji}</span>
         </div>
       </div>
-      <div class="card-body">
-        <button class="pick-btn ${on?'on':''}" onclick="toggle('${a.id}')">
+      <div class="row-info">
+        <div class="row-title">${escapeHtml(a.title)}</div>
+        <div class="row-meta">
+          <span class="row-platform-chip ${a.pk}">${escapeHtml(a.platform || 'TVアニメ')}</span>
+        </div>
+      </div>
+      <div class="row-right">
+        <div class="row-day-badge ${hasSlot?'':'unknown'}">${dayLabel}</div>
+        <button class="row-add-btn ${on?'on':''}" onclick="toggle('${a.id}')">
           ${on ? '✓ 追加済み' : '＋ 追加'}
         </button>
       </div>

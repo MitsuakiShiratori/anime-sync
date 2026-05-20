@@ -48,6 +48,29 @@ body{background:var(--bg);color:var(--text);font-family:"Hiragino Kaku Gothic Pr
 .bn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px 0;font-size:10px;color:var(--muted2);}
 .bn.on{color:var(--accent);}
 .bni{font-size:20px;}
+
+/* ===== 視聴中タブ：大型2列(PC3列)グリッド（愛でる＝ビジュアル重視） ===== */
+.w-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:960px;margin:0 auto;}
+@media(min-width:768px){.w-grid{grid-template-columns:repeat(3,1fr);}}
+.wc{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;animation:wcIn 0.35s ease both;}
+@keyframes wcIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.wct{width:100%;aspect-ratio:3/4;position:relative;overflow:hidden;background:var(--bg3);}
+.wct-img{width:100%;height:100%;object-fit:cover;display:block;}
+.wct-dummy{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:38px;}
+.wct-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(6,8,16,0.7) 70%,rgba(6,8,16,0.95) 100%);}
+.wc-platform{position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:0.5px;backdrop-filter:blur(8px);max-width:72%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wc-platform.abema{background:rgba(232,96,138,0.85);color:#fff;}
+.wc-platform.prime{background:rgba(0,168,107,0.85);color:#fff;}
+.wc-platform.unext{background:rgba(20,20,20,0.85);color:var(--gold);border:1px solid rgba(240,192,64,0.4);}
+.wc-platform.tv{background:rgba(30,40,60,0.85);color:var(--muted2);}
+.wc-day{position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(6,8,16,0.75);color:var(--muted2);backdrop-filter:blur(8px);border:1px solid var(--border2);}
+.wc-info{position:absolute;bottom:0;left:0;right:0;padding:8px 10px;}
+.wc-time{font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:3px;}
+.wc-title{font-size:12px;font-weight:700;line-height:1.3;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.wc-body{padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;}
+.wc-pts{font-size:10px;color:var(--accent);text-align:right;min-height:12px;}
+.wc-ebs{display:flex;gap:4px;}
+.wc-ebs .eb{flex:1;}
 </style>
 </head>
 <body>
@@ -83,7 +106,7 @@ body{background:var(--bg);color:var(--text);font-family:"Hiragino Kaku Gothic Pr
   <div class="bn" onclick="location.href='index.html'"><span class="bni">🏠</span><span>ホーム</span></div>
   <div class="bn" onclick="location.href='animesync_calendar.html'"><span class="bni">📅</span><span>スケジュール</span></div>
   <div class="bn" onclick="location.href='animesync_ranking.html'"><span class="bni">🏆</span><span>ランキング</span></div>
-  <div class="bn" onclick="location.href='animesync_works.html'"><span class="bni">🎬</span><span>作品</span></div>
+  <div class="bn" onclick="location.href='animesync_discover.html'"><span class="bni">🎬</span><span>作品</span></div>
   <div class="bn on"><span class="bni">👤</span><span>マイページ</span></div>
 </nav>
 <div class="toast" id="toast"></div>
@@ -130,28 +153,55 @@ function sw(tab, btn) {
 
 function drawW() {
   var wd = ld(gwk());
+  var el = document.getElementById("tw");
   if (!A.length) {
-    document.getElementById("tw").innerHTML =
+    el.innerHTML =
       "<div class='empty'><p>作品が未選択です。<br><a href='animesync_discover.html' style='color:var(--accent);font-weight:700'>📡 今期から追加</a><br>でしょぼいカレンダーから作品を選べます。</p></div>";
     return;
   }
-  var h = "";
+  var DAY_JP = ['日','月','火','水','木','金','土'];
+  var h = "<div class='w-grid'>";
   for (var i=0; i<A.length; i++) {
     var a = A[i];
     var d = wd[a.id] || {kami:0,yoin:0,fubin:0,total:0};
-    h += "<div class='card'>";
-    h += "<div class='th'><img src='" + a.img + "' alt='' onerror='this.style.display=\"none\"'></div>";
-    h += "<div class='inf'><div class='ttl'>" + a.t + "</div>";
-    h += "<div class='mt'><span class='bdg " + a.pk + "'>" + a.p + "</span>";
-    if (d.total > 0) { h += "<span style='color:var(--accent);font-size:12px'>" + d.total + "pt</span>"; }
+    var hasImg  = !!(a.img && a.img.length);
+    var hasSlot = (a.day !== null && a.day !== undefined && a.day >= 0 && a.day <= 6);
+    var pk      = a.pk || a.platformKey || 'tv';
+    var plat    = a.p  || a.platform    || 'TVアニメ';
+    var c1      = a.color1 || a.color || '#1a2040';
+    var c2      = a.color2 || '#2a3060';
+    var dayHtml = '';
+    if (hasSlot) {
+      var dl = a.dayLabel || DAY_JP[a.day];
+      if (dl.indexOf('曜') < 0) dl += '曜';
+      dayHtml = "<div class='wc-day'>" + dl + "</div>";
+    }
+    var timeText = hasSlot ? (a.time || '時間未定') : '時間未取得';
+    var ptsText  = d.total > 0 ? (d.total + "pt 今週") : '';
+
+    h += "<div class='wc'>";
+    h += "<div class='wct'>";
+    if (hasImg) {
+      h += "<img class='wct-img' src='" + a.img + "' alt='' loading='lazy' onerror=\"this.style.display='none';this.nextElementSibling.style.display='flex'\">";
+    }
+    h += "<div class='wct-dummy' style='" + (hasImg?'display:none;':'') + "background:linear-gradient(135deg," + c1 + "," + c2 + ")'>" + (a.e || '🎬') + "</div>";
+    h += "<div class='wct-overlay'></div>";
+    h += "<div class='wc-platform " + pk + "'>" + plat + "</div>";
+    h += dayHtml;
+    h += "<div class='wc-info'>";
+    h += "<div class='wc-time'>🕐 " + timeText + "</div>";
+    h += "<div class='wc-title'>" + a.t + "</div>";
     h += "</div></div>";
-    h += "<div class='ebs'>";
+    h += "<div class='wc-body'>";
+    h += "<div class='wc-pts'>" + ptsText + "</div>";
+    h += "<div class='wc-ebs'>";
     h += "<button class='eb kami' onclick='logE(\"" + a.id + "\",\"kami\")'>✨</button>";
     h += "<button class='eb yoin' onclick='logE(\"" + a.id + "\",\"yoin\")'>🌊</button>";
     h += "<button class='eb fubin' onclick='logE(\"" + a.id + "\",\"fubin\")'>💔</button>";
-    h += "</div></div>";
+    h += "</div></div></div>";
   }
-  document.getElementById("tw").innerHTML = h;
+  h += "</div>";
+  el.innerHTML = h;
 }
 
 function logE(aid, type) {
