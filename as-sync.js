@@ -122,7 +122,14 @@
           // remote の方が新しい、またはローカル未同期なら取り込む
           if (row.updated_at && row.updated_at !== lastAt) {
             setLocalSeason(rem.season);
-            if (rem.annict !== undefined) setLocalAnnict(rem.annict);
+            if (rem.annict !== undefined) {
+              // B-4: リモートが空文字でローカルに値があれば、ローカルを保護(pullで消さない)
+              // 他端末がトークン未設定のまま push してもこちらのトークンが消えない。
+              // 次回 pushSeason で paySig が違うので自動的に再 push され、リモートも復元される。
+              if (!(rem.annict === '' && localAnnict() !== '')) {
+                setLocalAnnict(rem.annict);
+              }
+            }
             try { localStorage.setItem(SYNC_AT, row.updated_at); } catch (e) {}
             emit('synced', { direction: 'pull' });
             // reload ガードは updated_at をキーにする:

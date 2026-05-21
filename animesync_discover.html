@@ -224,6 +224,10 @@ main { position:relative; z-index:1; padding:16px; }
   border:1px solid var(--border2); border-radius:8px; padding:8px 10px;
   color:var(--text); font-size:12px; font-family:'Noto Sans JP',sans-serif;
 }
+.annict-err {
+  font-size:11px; color:var(--accent2);
+  margin-top:6px; min-height:14px; line-height:1.4;
+}
 
 /* Annictカバー画像 */
 .card-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -269,6 +273,7 @@ main { position:relative; z-index:1; padding:16px; }
         <button class="disc-btn primary" onclick="saveAnnictToken()">保存</button>
         <button class="disc-btn" onclick="clearAnnictToken()">解除</button>
       </div>
+      <div class="annict-err" id="annict-err"></div>
     </div>
   </div>
 
@@ -685,7 +690,15 @@ function writeCache(){
 //  - Annictは権利の都合で画像が無い作品も多い → 取れた分だけ反映、
 //    残りは従来どおり絵文字プレースホルダ
 // ============================================================
-function getToken(){ try{ return localStorage.getItem(ANNICT_KEY)||''; }catch(e){ return ''; } }
+// 読み出し時もサニタイズ: 不可視文字(BOM/ZWSP/ZWNJ/ZWJ)を除去し前後をtrim。
+// 'Bearer xxx\n' のようなヘッダ汚染による 401 を防ぐ。
+function getToken(){
+  try{
+    return (localStorage.getItem(ANNICT_KEY)||'')
+      .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
+      .trim();
+  }catch(e){ return ''; }
+}
 
 function setAnnictStatus(txt,on){
   const el=document.getElementById('annict-status');
@@ -701,8 +714,23 @@ function toggleAnnictPanel(){
 }
 function saveAnnictToken(){
   const inp=document.getElementById('annict-input');
-  const v=((inp&&inp.value)||'').trim();
-  if(!v){ showToast('トークンを入力してください'); return; }
+  const err=document.getElementById('annict-err');
+  function setErr(m){ if(err) err.textContent = m || ''; }
+  setErr('');
+  // 不可視文字除去 → trim。saveAnnictToken/getToken 双方でサニタイズ
+  let v=((inp&&inp.value)||'').replace(/[\u200B\u200C\u200D\uFEFF]/g,'').trim();
+  if(!v){ setErr('トークンを入力してください'); return; }
+  // 貼り付け事故対策: コマンド文字列が含まれていれば拒否
+  // (例: 「localStorage.getItem('as_annict_token')」を誤って貼り付けるケース)
+  if(/localStorage\.|getItem|setItem/i.test(v)){
+    setErr('不正なトークン形式です。コピー元を確認してください（コマンド文字列が含まれています）');
+    return;
+  }
+  // 長さ警告: Annict個人用トークンは通常43文字前後
+  if(v.length < 20 || v.length > 100){
+    setErr('トークンの長さが想定外です（'+v.length+'文字）。Annictから再取得してください');
+    return;
+  }
   try{ localStorage.setItem(ANNICT_KEY, v); }catch(e){}
   if(inp) inp.value='';                       // 画面に残さない
   annictCachedTs=0;
